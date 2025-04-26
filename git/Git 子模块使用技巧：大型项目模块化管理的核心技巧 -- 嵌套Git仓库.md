@@ -114,6 +114,17 @@ cd honlnk
 git init
 git remote add origin <父仓库的远程URL>  # 例如 git@github.com:yourname/honlnk.git
 ```
+> [! WARNING] 注意：
+> 在.obsidian文件夹中有两个文件，`.obsidian/workspace.json` 和 `.obsidian/workspaces.json`存储当前工作区布局，并在您打开新文件时更新。这种数据会随时变化，无需备份。
+> ``` bash
+> touch .gitignore # 新建一个名为 `.gitignore` 的文件
+> ```
+> 打开文件并输入以下内容。
+> ``` gitignore
+> .obsidian/workspace.json
+> .obsidian/workspaces.json
+> ```
+> 
 
 #### 2. 添加子模块
 ##### 常规方法
