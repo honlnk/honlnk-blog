@@ -85,7 +85,7 @@
 ---
 ## 场景
 ### 场景描述：
-我现在在一个名叫honlnk的文件夹下有若干嵌套的子文件夹，在这些子文件中，有部分文件夹被我用git进行了管理，并且均已在远程仓库同步。他们目录地址分别为：./博客/；./编程/项目1/；./编程/项目2/。我现在计划将honlnk这个项目也使用git管理起来，从而达到一个这些若干git仓库的一个父仓库的目的。
+我现在在一个名叫honlnk的文件夹下有若干嵌套的子文件夹，在这些子文件中，有部分文件夹被我用git进行了管理，并且均已在远程仓库同步。他们目录地址分别为：./博客/；./编程/项目1/；./编程/项目2/。我现在计划将honlnk这个项目也使用Git管理起来，并将其包含的所有子仓库作为子模块添加到honlnk仓库中，实现由Git根仓库来管理其他Git子仓库的方案。
 
 ---
 ### 实现操作
@@ -160,7 +160,7 @@ git rm --cached 编程/项目2
 git submodule add "$REMOTE_URL" 编程/项目2
 ```
 
-##### 简介方法
+##### 简洁方法
 ```bash
 # 添加博客子模块
 git submodule add $(cd 博客 && git remote get-url origin) 博客
@@ -255,7 +255,7 @@ git push -u origin "$DEFAULT_BRANCH"
   在父仓库中执行：
   ```bash
   git submodule update --remote  # 拉取所有子模块最新提交
-  git commit -am "更新子模块" # git commit -am "" == git add . + git commit -m ""
+  git commit -am "更新子模块" # git commit -am "" ≈ git add . + git commit -m "" PS: 未被跟着的文件使用 -am 属性是提交不上的，必须使用 add 命令添加追踪。
   git push
   ```
 
