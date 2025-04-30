@@ -48,13 +48,13 @@ BRAT可以帮助我们通过网站链接安装测试版的第三方插件。
 ##### 安装I18N插件
 打开I18N的官网(开源仓库)：[https://github.com/Obsidian-Forge/obsidian-i18n](https://github.com/Obsidian-Forge/obsidian-i18n)
 在README文件中可以看到此款插件的使用说明。
-![](image/I18N官方安装说明.png)
+![](I18N官方安装说明.png)
 
 **操作步骤**
 可以选择与官网同步的安装方式：通过命令面板输入快捷命令安装。
 也可以选择鼠标点击的方式进行安装：
 1. 设置 > 第三方插件 > BRAT
-   ![](image/BRAT要点击的位置.png)
+   ![](BRAT要点击的位置.png)
 2. 单击 "Add Beta plugin" 按钮 > 输入说明中的网址 > 单击 "Add Plugin" 按钮（需稍等片刻）
    ```bash
    https://github.com/Obsidian-Forge/obsidian-i18n
@@ -111,12 +111,12 @@ Git仓库类似于智能文件存档系统，特别适合管理不断变化的�
 5. 在搜索框中输入：`Git: 初始化新仓库`（未使用I18N则输入：`Git: initialize a new repo`）
 6. 选择搜索结果，Git会创建一个新仓库。
 7. 单击左侧边栏的Git图标，在右侧会打开一个侧面板，即Git管理详情。`Changes` 栏下显示已修改的文件，`Staged Changes` 栏下存储暂存的更改。
-   ![](image/git插件图标.png)
-   ![](image/git管理详情.png)
+   ![](git插件图标.png)
+   ![](git管理详情.png)
 8. 单击 `Stage All` 按钮，`Changes` 中的文件会进入 `Staged Changes` 中，即将这些更改暂存
-   ![](image/暂存所有按钮.png)
+   ![](暂存所有按钮.png)
 9. 单击 `Commit` 按钮，在输入框中填写提交信息，例如："仓库创建成功"。
-   ![](image/提交按钮.png)
+   ![](提交按钮.png)
 
 ##### 同步远程Git仓库
 > [! TIP]
@@ -128,11 +128,11 @@ Git仓库类似于智能文件存档系统，特别适合管理不断变化的�
 1. 浏览器中输入：`https://gitee.com/` 打开Gitee平台
 2. 登录/注册账户
 3. 单击右上角加号，选择“新建仓库”
-   ![](image/新建远程仓库按钮.png)
+   ![](新建远程仓库按钮.png)
 4. 输入必要信息，单击“创建”
-   ![](image/远程仓库创建案例.png)
+   ![](远程仓库创建案例.png)
 5. 单击复制按钮，将仓库地址复制到剪贴板备用。
-   ![](image/复制仓库地址.png)
+   ![](复制仓库地址.png)
 
 **推送操作步骤**
 1. 在命令面板中输入 `Git: 编辑远程仓库` 或 `Git: Edit remotes`
@@ -142,7 +142,7 @@ Git仓库类似于智能文件存档系统，特别适合管理不断变化的�
    3. Gitee用户名（首次连接需要输入）
    4. Gitee密码（首次连接需要输入）
 3. 单击 “Push” 按钮，选择 `origin/master` 即可将数据推送到远程Git仓库
-   ![](image/推送按钮.png)
+   ![](推送按钮.png)
 
 **克隆操作步骤**
 > [! TIP] 提示
