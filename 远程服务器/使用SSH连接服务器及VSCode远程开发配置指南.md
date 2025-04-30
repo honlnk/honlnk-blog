@@ -8,7 +8,7 @@
 
 ### 2. 核心组件
 - **服务端**：需安装 `openssh-server`（一般系统已自带）
-	- 安装实例：（Ubuntu安装命令：`sudo apt install openssh-server`）。  
+	- 安装示例：（Ubuntu安装命令：`sudo apt install openssh-server`）。  
 - **客户端**：需安装 `openssh-client`（一般系统已自带）。  
 - **密钥对**：  
   - **公钥**（`id_***.pub`文件）：相当于“锁”，可公开，用于加密和身份验证。  
@@ -105,12 +105,13 @@
    - 按 `Ctrl/Command+O` 或点击资源管理器中的 **Open Folder/打开文件夹**，选择服务器上的路径。  
 
 ![](images/文件选择器可视化页面.png)  
+2. **打开文件后VSCode会在本地留下一个历史记录**
 
-2. **编辑文件**：  
+![](images/远程资源管理器文件打开记录.png)
+
+3. **编辑文件**：  
    - 直接修改文件并保存，VSCode会自动同步到服务器。  
    - 终端操作：按 `` Ctrl+` `` 打开集成终端，执行命令（如 `npm install`）。  
-
-![](images/远程资源管理器文件打开记录.png)  
 
 ---
 
