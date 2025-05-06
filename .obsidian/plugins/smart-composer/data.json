@@ -288,7 +288,7 @@
       "dimension": 1024
     }
   ],
-  "chatModelId": "deepseek-reasoner",
+  "chatModelId": "deepseek-chat",
   "applyModelId": "deepseek-chat",
   "embeddingModelId": "openai/text-embedding-3-small",
   "systemPrompt": "",
@@ -305,7 +305,7 @@
   },
   "chatOptions": {
     "includeCurrentFileContent": true,
-    "enableTools": true,
+    "enableTools": false,
     "maxAutoIterations": 1
   }
 }

@@ -1,0 +1,80 @@
+{
+  "id": "5a87bd99-c51d-43c8-9195-fe4519b2eb8f",
+  "title": "你好",
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "root": {
+          "children": [
+            {
+              "children": [
+                {
+                  "detail": 0,
+                  "format": 0,
+                  "mode": "normal",
+                  "style": "",
+                  "text": "你好",
+                  "type": "text",
+                  "version": 1
+                }
+              ],
+              "direction": "ltr",
+              "format": "",
+              "indent": 0,
+              "type": "paragraph",
+              "version": 1,
+              "textFormat": 0,
+              "textStyle": ""
+            }
+          ],
+          "direction": "ltr",
+          "format": "",
+          "indent": 0,
+          "type": "root",
+          "version": 1
+        }
+      },
+      "promptContent": [
+        {
+          "type": "text",
+          "text": "\n\n你好\n\n"
+        }
+      ],
+      "id": "aee73419-474a-463a-b499-dcb46d09bc12",
+      "mentionables": [
+        {
+          "type": "current-file",
+          "file": null
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "你好！有什么我可以帮您解答的关于 Obsidian 或 Markdown 的问题吗？",
+      "id": "e741f8cd-0638-4b0e-a1a5-960107b78ad1",
+      "metadata": {
+        "model": {
+          "providerType": "deepseek",
+          "providerId": "deepseek",
+          "id": "deepseek-chat",
+          "model": "deepseek-chat",
+          "enable": true
+        },
+        "usage": {
+          "prompt_tokens": 400,
+          "completion_tokens": 19,
+          "total_tokens": 419,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 400
+        }
+      }
+    }
+  ],
+  "createdAt": 1746539039761,
+  "updatedAt": 1746539044627,
+  "schemaVersion": 1
+}
