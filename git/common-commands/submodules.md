@@ -58,3 +58,75 @@
 - 提交变更
 
 ### 修改子模块配置
+
+#### 更新子模块路径以及名称
+- 使用命令移动或重命名子模块目录
+	``` bash
+	git mv old/path new/path # 将旧的路由更名为新的路由
+	```
+	执行完毕后`.gitmodules`中的路由配置信息会自动更新
+	``` bash
+	git config -f .gitmodules submodule.<submodule-neme>.path new/path # 如果没有自动更新可使用此命令更新，或手动编辑 .gitmodules 文件
+	```
+- 使用文件编辑器方式更新子模块名称
+	``` bash
+	vim .gitmodules # 使用任何编辑方式均可
+	```
+	修改`[submodule "<子模块名>"]`中的配置
+	``` gitmodules
+	[submodule "old-name"]  => [submodule "new-name"] # 将名称配置修改为新的名称（最好与路径字符串统一）
+	path = <new/path>
+    url = <URL保持不变>
+	```
+- 在其他地方使用最新的仓库
+	``` bash
+	git pull # 拉取最新内容，修改后的路径会以一个全新的文件夹的方式新增在这里
+	rm -rf old/path # 移除掉以及被淘汰的旧路径
+	git submodule update # 更新子模块内容，如果此命令无效可先输入 git submoduel init
+	cd new/path
+	git switch <目标分支> # 新克隆的子模块的分支处于游离状态，所以需呀切换到有效分支在做操作
+	```
+
+#### 更新子模块远程地址
+
+- 使用命令更新子模块路径
+	``` bash
+	git config -f .gitmodules submodule.<submodule-name>.url <new-url>
+	```
+	自动更新`.gitmodules`文件中的呢日欧能够，或使用文本编辑系做如下修改
+	``` gitmodules
+	[submodule "submodule-name"]
+	path = <路径保持不变>
+    url = <old-url> => url = <new-url> # 将URL配置修改为新的URL
+	```
+- 使用命令更新子模块
+	``` bash
+	git submodule update --remote
+	```
+- 在其他地方使用最新的仓库
+	``` bash
+	git pull # 拉取最新内容，修改后的路径会以一个全新的文件夹的方式新增在这里
+	git submodule update # 更新子模块内容，如果此命令无效可先输入 git submoduel init
+	```
+
+#### 更新子模块内容，以及同步父模块
+
+- 从本地更新到远程
+	``` bash
+	cd path
+	git add .
+	git commit -m "<提交信息>"
+	git pull [仓库名称] [目标分支] # 提交之前拉取一次最新版的远程仓库，防止提交冲突
+	git push [仓库名称] [目标分支]
+	cd <父仓库的根目录>
+	git commit -am "更新子模块"
+	git pull
+	git push
+	``` 
+- 从远程更新到本地
+	``` bash
+	cd path
+	git switch <分支名称>
+	git pull [仓库名称] [目标分支]
+	git submodule update --remote [--init] [--recursive] # 远程指令（必填）、初始化指令（选填）、递归指令（选填）
+	```
