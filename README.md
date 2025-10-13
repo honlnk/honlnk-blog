@@ -58,3 +58,7 @@ honlnk-blog 是一个基于 Obsidian 的个人博客项目，用于记录与分�
 ## 联系方式
 
 如需交流或反馈，请联系项目维护者 [hong-ying-19](https://gitee.com/hong-ying-19)。欢迎提交 Issue 或 Pull Request！
+
+## 更新日志
+
+- 2025-10-13: 优化了仓库的动态路径管理，支持在 GitHub 和 Gitee 之间轻松切换
