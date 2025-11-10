@@ -1,1 +1,8 @@
-{}
+{
+  "cssTheme": "Typewriter",
+  "baseFontSizeAction": true,
+  "translucency": false,
+  "enabledCssSnippets": [
+    "scrollbar-style"
+  ]
+}
