@@ -80,8 +80,17 @@ cd ~/piclist-config
   },
   "buildIn": {
     "rename": {
-      "format": "{y}{m}{d}_{h}{i}{s}_{md5-6}.{ext}",
+      "format": "{Y}{m}{d}_{h}{i}{s}_{md5-16}",
       "enable": true
+    },
+    "watermark": {
+      "isAddWatermark": true,
+      "watermarkType": "text",
+      "watermarkText": "www.honlnk.top",
+      "watermarkColor": "rgba(128, 128, 128, 0.5)",
+      "watermarkScaleRatio": 0.1,
+      "watermarkPosition": "southeast",
+      "watermarkDegree": 0
     }
   },
   "picgoPlugins": {}
