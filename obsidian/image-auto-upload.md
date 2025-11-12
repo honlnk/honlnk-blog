@@ -63,20 +63,28 @@ cd ~/piclist-config
   "picBed": {
     "current": "aliyun",
     "aliyun": {
-      "accessKeyId": "你的AccessKeyID",
-      "accessKeySecret": "你的AccessKeySecret",
+      "accessKeyId": "**** YOUR_KEY_ID ****",
+      "accessKeySecret": "**** YOUR_KEY_SECRET ****",
       "bucket": "honlnk-obsidian",
-      "area": "oss-cn-hangzhou",
-      "path": "obsidian/images/",
+      "area": "oss-cn-beijing",
+      "path": "images/",
       "customUrl": "https://honlnk-obsidian.honlnk.top"
     }
   },
-  "server": {
-    "host": "0.0.0.0",
-    "port": 36677,
-    "upload": true,
-    "apiKeys": ["ZhiDaoXunChang-Honlnk"]
-  }
+  "settings": {
+    "server": {
+      "port": 36677,
+      "host": "0.0.0.0",
+      "key": "ZhiDaoXunChang-Honlnk"
+    }
+  },
+  "buildIn": {
+    "rename": {
+      "format": "{y}{m}{d}_{h}{i}{s}_{md5-6}.{ext}",
+      "enable": true
+    }
+  },
+  "picgoPlugins": {}
 }
 ```
 
@@ -123,41 +131,7 @@ curl: (56) Recv failure: Connection reset by peer
 
 **根本原因**：Node.js 的 multipart 解析器对 macOS 客户端发出的 `form-data` 边界字符串（boundary）处理异常，导致 silent crash。
 
-**解决方案**：用 Nginx 作为反向代理，彻底隔离客户端差异。
-
-#### 安装与配置
-
-```bash
-sudo apt install nginx
-sudo certbot --nginx -d piclist.honlnk.top  # 自动申请 Let's Encrypt 证书
-```
-
-编辑配置：
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name piclist.honlnk.top;
-
-    ssl_certificate /etc/letsencrypt/live/piclist.honlnk.top/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/piclist.honlnk.top/privkey.pem;
-
-    client_max_body_size 20M;
-
-    location / {
-        proxy_pass http://127.0.0.1:36677;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_http_version 1.1;
-    }
-}
-```
-
-重载 Nginx：
-
-```bash
-sudo nginx -t && sudo systemctl reload nginx
-```
+**解决方案**：用 Nginx 作为反向代理，并挂载SSL证书，彻底隔离客户端差异。
 
 ---
 
@@ -177,7 +151,7 @@ print(resp.text)
 🎉 输出：
 
 ```json
-{"success":true,"result":["https://honlnk-obsidian.honlnk.top/images/Avatar-AI.jpg"]}
+{"success":true,"result":["https://honlnk-obsidian.honlnk.top/images/251112_152317_%7Bmd5-6%7D.%7Bext%7D.png"]}
 ```
 
 **完美成功！**
@@ -186,26 +160,23 @@ print(resp.text)
 
 ## 🧩 集成到 Obsidian
 
-1. 安装插件：**PicGo**（社区插件市场搜索即可）
+1. 安装插件：**Image auto upload**（社区插件市场搜索即可）
 2. 配置上传接口：
     - API 地址：`https://piclist.honlnk.top/upload`
     - 参数：`key=ZhiDaoXunChang-Honlnk`
-    - 返回字段：`result[0]`
 3. 拖拽图片 → 自动上传 → 插入 `![](https://...)`
-
-> 💡 你也可以使用 **Custom Attachment Location** 插件，配合 Shell 脚本调用 `curl`。
 
 ---
 
 ## 🔐 安全与维护建议
 
-|项目|建议|
-|---|---|
-|**密钥管理**|定期更换 `apiKeys`，避免泄露|
-|**域名解析**|将 `piclist.honlnk.top` A 记录指向服务器 IP|
-|**OSS 权限**|子用户仅授权必要权限，禁用主账号 AK|
-|**自动续期**|`certbot renew --quiet` 加入 crontab|
-|**日志监控**|`tail -f /var/log/nginx/access.log`|
+| 项目         | 建议                                  |
+| ---------- | ----------------------------------- |
+| **密钥管理**   | 定期更换 `apiKeys`，避免泄露                 |
+| **域名解析**   | 将 `piclist.honlnk.top` A 记录指向服务器 IP |
+| **OSS 权限** | 子用户仅授权必要权限，禁用主账号 AK                 |
+| **自动续期**   | `certbot renew --quiet` 加入 crontab  |
+| **日志监控**   | `tail -f /var/log/nginx/access.log` |
 
 ---
 
@@ -228,71 +199,3 @@ print(resp.text)
 
 ---
 
-
-# 待优化
-
-上传图片不会自动格式化图片名
-
-控制台日志：
-``` bash
-startup
-[PicList Server] is listening at 36677
-[PicList Server] upload files in list
-[PicList INFO]: Before transform
-[PicList INFO]: Transforming... Current transformer is [path]
-[PicList INFO]: Before upload
-[PicList INFO]: Uploading... Current uploader is [aliyun]
-[PicList SUCCESS]: 
-https://honlnk-obsidian.honlnk.top/images/image.png
-[PicList Server] upload result
- https://honlnk-obsidian.honlnk.top/images/image.png
-[PicList Server] upload files in list
-[PicList INFO]: Before transform
-[PicList INFO]: Transforming... Current transformer is [path]
-[PicList INFO]: Before upload
-[PicList INFO]: Uploading... Current uploader is [aliyun]
-[PicList SUCCESS]: 
-https://honlnk-obsidian.honlnk.top/images/Avatar-AI.jpg
-[PicList Server] upload result
- https://honlnk-obsidian.honlnk.top/images/Avatar-AI.jpg
-
-```
-
-配置文件：
-``` bash
-{
-  "picBed": {
-    "current": "aliyun",
-    "aliyun": {
-      "accessKeyId": "***REMOVED***",
-      "accessKeySecret": "***REMOVED***",
-      "bucket": "honlnk-obsidian",
-      "area": "oss-cn-beijing",
-      "path": "images/",
-      "customUrl": "https://honlnk-obsidian.honlnk.top"
-    }
-  },
-  "settings": {
-    "server": {
-      "port": 36677,
-      "host": "0.0.0.0",
-      "key": "ZhiDaoXunChang-Honlnk"
-    }
-  },
-  "picgoPlugins": {},
-  "buildIn": {
-    "rename": {
-      "format": "${year}${month}${day}_${hour}${minute}${second}_${hash:6}.${ext}",
-      "enable": false
-    }
-  }
-}
-```
-
-操作系统：
-Ubuntu
-
-主机：
-阿里云 2c2g 服务器
-
-Docker安装
