@@ -1,1 +1,26 @@
-{}
+{
+    "algorithm": {
+        "description": "算法"
+    },
+    "dev-standards": {
+        "description": "开发规范"
+    },
+    "git/common-commands": {
+        "description": "常用命令"
+    },
+    "github-docx-zh": {
+        "description": "github中文文档"
+    },
+    "remoteServer": {
+        "description": "远程服务器"
+    },
+    "research": {
+        "description": "调研"
+    },
+    "vue-component": {
+        "description": "vue组件"
+    },
+    "web-testing": {
+        "description": "网络测试"
+    }
+}
