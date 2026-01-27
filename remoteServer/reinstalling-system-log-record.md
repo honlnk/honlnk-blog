@@ -1,6 +1,6 @@
 # 重装系统记录日志
 
-本次重装的系统为：**`Ubuntu 24.04.3 LTS`**
+本次重装的系统为：**`Ubuntu 24.04 LTS`**
 
 ## 首次登录
 
@@ -9,6 +9,50 @@
 1. 在阿里云平台通过Workbench远程连接服务器
 2. 选择免密链接 => 输入用户名 => 点击登录
 3. 更新 `.ssh/authorized_keys`文件中的`ssh`公钥
+
+### 创建新用户
+
+- 在服务器中尽可能不使用root直接登录，最好创建一个其他用户
+``` bash
+root@honlnk-huoshan:~# adduser honlnk
+info: Adding user `honlnk' ...
+info: Selecting UID/GID from range 1000 to 59999 ...
+info: Adding new group `honlnk' (1000) ...
+info: Adding new user `honlnk' (1000) with group `honlnk (1000)' ...
+info: Creating home directory `/home/honlnk' ...
+info: Copying files from `/etc/skel' ...
+New password: 
+Retype new password: 
+Sorry, passwords do not match.
+passwd: Authentication token manipulation error
+passwd: password unchanged
+Try again? [y/N] y
+New password: 
+Retype new password: 
+passwd: password updated successfully
+Changing the user information for honlnk
+Enter the new value, or press ENTER for the default
+		Full Name []: [直接按回车]
+		Room Number []: [直接按回车]
+		Work Phone []: [直接按回车] 
+		Home Phone []: [直接按回车]
+		Other []: [直接按回车]
+Is the information correct? [Y/n] Y
+info: Adding new user `honlnk' to supplemental / extra groups `users' ...
+info: Adding user `honlnk' to group `users' ...
+root@honlnk-huoshan:~# 
+```
+
+- 设置 sudo 权限：
+``` bash
+# 将用户添加到 sudo 组
+usermod -aG sudo honlnk
+
+# 验证用户信息
+id honlnk
+groups honlnk
+```
+
 
 ## 首次通过SSH登录
 
@@ -110,6 +154,115 @@ ecs-user@iZ2zei44aekdpo7yjb55e9Z:~$
 *   **内存**: 总共 1.6 GB 内存，大约 1.2 GB 可用。**没有配置交换空间 (Swap)**。
 *   **硬盘**: 根目录 (`/`) 总共 40 GB，已用 7%。其他都是临时文件系统（`tmpfs`）或启动分区。
 
+
+## 安装Git
+
+在Ubuntu操作系统上安装Git有几种方法，以下是最常用的几种：
+
+### 使用APT包管理器
+
+#### 1. 更新软件包索引
+```bash
+sudo apt update
+```
+
+#### 2. 安装Git
+```bash
+sudo apt install git
+```
+
+#### 3. 验证安装
+```bash
+git --version
+```
+
+
+### 配置Git（安装后必需）
+
+安装完成后，建议进行基本配置：
+
+```bash
+# 设置用户名
+git config --global user.name g-"你的名字"
+
+# 设置邮箱
+git config --global user.email "your-email@example.com"
+
+# 查看配置
+git config --list
+```
+
+
+## 安装Docker
+
+如果你的服务器还没有安装 Docker,推荐使用 **tech-shrimp/docker_installer** 项目。
+
+### 方式一：一键安装（推荐国内用户）
+
+**项目地址**: https://github.com/tech-shrimp/docker_installer
+**作者**: 技术爬爬虾（Bilibili 知名科技 UP 主）
+
+该项目专门解决国内网络环境下无法安装 Docker 的问题，使用 Docker 官方安装包，每天自动同步最新版本，安全可靠。
+
+**一键安装命令**:
+
+```bash
+# GitHub 链接
+sudo curl -fsSL https://github.com/tech-shrimp/docker_installer/releases/download/latest/linux.sh | bash -s docker --mirror Aliyun
+
+# Gitee 备用链接（国内推荐）
+sudo curl -fsSL https://gitee.com/tech-shrimp/docker_installer/releases/download/latest/linux.sh | bash -s docker --mirror Aliyun
+```
+
+**启动 Docker 服务**:
+```bash
+
+sudo service docker start
+
+```
+
+**配置镜像加速**（解决拉取镜像慢的问题）:
+```bash
+
+sudo vi /etc/docker/daemon.json
+
+```
+
+添加以下内容:
+```json
+{
+	"registry-mirrors": [
+		"https://docker.m.daocloud.io",
+		"https://docker.1panel.live",
+		"https://hub.rat.dev"
+	],
+	"dns": ["114.114.114.114", "8.8.8.8"]
+}
+```
+
+重启 Docker:
+```bash
+sudo service docker restart
+```
+
+**验证安装**:
+```bash
+docker --version
+docker compose version
+sudo docker run hello-world
+```
+
+如果看到输出内容包含这段信息，就说明测试成功了：
+```text
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+```
+
+### 方式二：官方安装（国际网络环境）
+
+如果你的服务器可以正常访问 Docker Hub，也可以使用官方安装方法:
+- Ubuntu/Debian: https://docs.docker.com/engine/install/ubuntu/
+- CentOS/RHEL: https://docs.docker.com/engine/install/centos/
 
 ## 安装ClashCLI工具
 
