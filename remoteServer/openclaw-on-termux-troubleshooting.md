@@ -23,12 +23,12 @@
 
 ## 初始状态
 
-| 项目 | 状态 |
-|------|------|
-| Gateway 服务 | ✅ 已启动（端口 18789） |
-| AI 模型配置 | ✅ 完成（zai/glm-5） |
-| Token | ✅ 设置（naikuaiwk666） |
-| Web UI 聊天 | ❌ 无法正常工作 |
+| 项目         | 状态                     |
+| ---------- | ---------------------- |
+| Gateway 服务 | ✅ 已启动（端口 18789）        |
+| AI 模型配置    | ✅ 完成（zai/glm-5）        |
+| Token      | ✅ 设置（{{ your-token }}） |
+| Web UI 聊天  | ❌ 无法正常工作               |
 
 ---
 
@@ -43,13 +43,13 @@ unauthorized: gateway token missing
 
 **原因**：
 配置的 Token 与 Gateway 实际使用的 Token 不一致。
-- 用户设置的 Token: `naikuaiwk666`
+- 用户设置的 Token: `{{ your-token }}`
 - Dashboard 生成的 Token: `50909e855fec2ae4b5187bd9619dd3f99ae8fec532330b40`
 
 **解决**：
 ```bash
 export PATH=$HOME/.npm-global/bin:$PATH
-openclaw config set gateway.auth.token naikuaiwk666
+openclaw config set gateway.auth.token {{ your-token }}
 ```
 
 **注意**：由于使用 Zsh 而非 Bash，需要手动指定 PATH。
@@ -234,13 +234,13 @@ openclaw config set gateway.trustedProxies '["127.0.0.1","::1"]'
 
 ## 最终配置
 
-| 配置项 | 值 |
-|--------|-----|
-| AI 模型 | `zai/glm-4.7` |
-| Token | `naikuaiwk666` |
-| 端口 | `18789` |
-| 绑定地址 | `lan` |
-| 信任代理 | `127.0.0.1`, `::1` |
+| 配置项         | 值                        |
+| ----------- | ------------------------ |
+| AI 模型       | `zai/glm-4.7`            |
+| Token       | `{{ your-token }}`       |
+| 端口          | `18789`                  |
+| 绑定地址        | `lan`                    |
+| 信任代理        | `127.0.0.1`, `::1`       |
 | Web UI 访问地址 | `https://127.0.0.1:8443` |
 
 ---
@@ -249,7 +249,7 @@ openclaw config set gateway.trustedProxies '["127.0.0.1","::1"]'
 
 ### 启动 Gateway
 ```bash
-tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token naikuaiwk666 --allow-unconfigured'
+tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token {{ your-token }} --allow-unconfigured'
 ```
 
 ### 管理 Gateway
@@ -321,7 +321,7 @@ openclaw devices remove <deviceId>
     "bind": "lan",
     "auth": {
       "mode": "token",
-      "token": "naikuaiwk666"
+      "token": "{{ your-token }}"
     },
     "trustedProxies": ["127.0.0.1", "::1"]
   }

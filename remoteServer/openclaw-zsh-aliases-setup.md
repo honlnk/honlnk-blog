@@ -20,7 +20,7 @@
 # --- OpenClaw Start ---
 export TERMUX_VERSION=1
 export TMPDIR=$HOME/tmp
-export OPENCLAW_GATEWAY_TOKEN=naikuaiwk666
+export OPENCLAW_GATEWAY_TOKEN={{ your-token }}
 export PATH=$HOME/.npm-global/bin:$PATH
 
 alias ocr="pkill -9 -f 'openclaw' 2>/dev/null; tmux kill-session -t openclaw 2>/dev/null; sleep 1; tmux new -d -s openclaw; sleep 1; tmux send-keys -t openclaw \"export PATH=$NPM_BIN:\$PATH TMPDIR=\$HOME/tmp; export OPENCLAW_GATEWAY_TOKEN=$TOKEN; openclaw gateway --bind lan --port $PORT --token \\\$OPENCLAW_GATEWAY_TOKEN --allow-unconfigured\" C-m"
@@ -55,11 +55,11 @@ alias ockill='pkill -9 -f "openclaw" 2>/dev/null; tmux kill-session -t openclaw 
 # WARNING: This section contains your access token - keep ~/.zshrc secure
 export TERMUX_VERSION=1
 export TMPDIR=$HOME/tmp
-export OPENCLAW_GATEWAY_TOKEN=naikuaiwk666
+export OPENCLAW_GATEWAY_TOKEN={{ your-token }}
 export PATH=$HOME/.npm-global/bin:$PATH
 
 # 启动 OpenClaw (带 nginx)
-alias ocr='pkill -9 -f openclaw 2>/dev/null; tmux kill-session -t openclaw 2>/dev/null; sleep 1; tmux new -d -s openclaw "export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token naikuaiwk666 --allow-unconfigured"; pkill nginx 2>/dev/null; sleep 1; nginx -c $HOME/nginx-ssl/nginx.conf'
+alias ocr='pkill -9 -f openclaw 2>/dev/null; tmux kill-session -t openclaw 2>/dev/null; sleep 1; tmux new -d -s openclaw "export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token {{ your-token }} --allow-unconfigured"; pkill nginx 2>/dev/null; sleep 1; nginx -c $HOME/nginx-ssl/nginx.conf'
 
 # 查看 OpenClaw 日志
 alias oclog='tmux attach -t openclaw'

@@ -38,7 +38,7 @@ ssh -L 8443:127.0.0.1:8443 iqoo-z7 -N -f
 
 # 2. 浏览器访问
 # https://127.0.0.1:8443
-# Token: naikuaiwk666
+# Token: {{ your-token }}
 ```
 
 ---
@@ -52,7 +52,7 @@ ssh -L 8443:127.0.0.1:8443 iqoo-z7 -N -f
 ocr
 
 # 方式 2：分别启动
-tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token naikuaiwk666 --allow-unconfigured'
+tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token {{ your-token }} --allow-unconfigured'
 nginx -c ~/nginx-ssl/nginx.conf
 ```
 
@@ -115,7 +115,7 @@ http://192.168.31.154:18789
 
 首次访问需要输入 Token：
 ```
-naikuaiwk666
+{{ your-token }}
 ```
 
 ---
@@ -124,13 +124,13 @@ naikuaiwk666
 
 ### 当前配置概览
 
-| 配置项 | 值 |
-|--------|-----|
-| AI 模型 | `zai/glm-4.7` |
-| Token | `naikuaiwk666` |
-| 端口 | `18789` |
-| 绑定地址 | `lan` |
-| 信任代理 | `127.0.0.1`, `::1` |
+| 配置项   | 值                  |
+| ----- | ------------------ |
+| AI 模型 | `zai/glm-4.7`      |
+| Token | `{{ your-token }}` |
+| 端口    | `18789`            |
+| 绑定地址  | `lan`              |
+| 信任代理  | `127.0.0.1`, `::1` |
 
 ### 修改配置
 
@@ -337,7 +337,7 @@ openclaw devices approve <requestId>
 source ~/.zshrc
 
 # 或者使用完整命令
-tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token naikuaiwk666 --allow-unconfigured'
+tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token {{ your-token }} --allow-unconfigured'
 ```
 
 ---
@@ -443,10 +443,10 @@ oclog
 
 ### 重要信息
 
-| 信息 | 值 |
-|------|-----|
-| Token | `naikuaiwk666` |
-| 端口 | `18789` |
-| HTTPS 端口 | `8443` |
-| 配置文件 | `~/.openclaw/openclaw.json` |
-| 日志目录 | `~/openclaw-logs/` |
+| 信息       | 值                           |
+| -------- | --------------------------- |
+| Token    | `{{ your-token }}`          |
+| 端口       | `18789`                     |
+| HTTPS 端口 | `8443`                      |
+| 配置文件     | `~/.openclaw/openclaw.json` |
+| 日志目录     | `~/openclaw-logs/`          |
