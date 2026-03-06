@@ -368,6 +368,74 @@ nginx -c ~/nginx-ssl/nginx.conf
 
 ---
 
+### 问题 6：手机重启后服务停止
+
+**症状**：
+- 访问 `https://127.0.0.1:8443` 无响应
+- tmux 会话不存在
+- openclaw 进程不存在
+
+**原因**：
+手机重启后，tmux 会话和所有进程都会停止。
+
+**排查**：
+
+```bash
+# 检查 tmux 会话
+tmux list-sessions
+
+# 检查进程
+ps aux | grep -E 'openclaw|nginx' | grep -v grep
+```
+
+**解决方案**：
+
+```bash
+# 方式 1：使用别名（需要先加载配置）
+ssh iqoo-z7
+source ~/.zshrc
+ocr
+
+# 方式 2：手动启动
+ssh iqoo-z7
+tmux new -d -s openclaw 'export PATH=$HOME/.npm-global/bin:$PATH TMPDIR=$HOME/tmp && openclaw gateway --bind lan --port 18789 --token {{ your-token }} --allow-unconfigured'
+nginx -c ~/nginx-ssl/nginx.conf
+```
+
+**注意**：
+- 文档中的 `{{ your-token }}` 需要替换成你的真实 Token
+- 如果 `ocr` 命令找不到，说明别名未加载，使用方式 2
+
+---
+
+### 问题 7：HTTPS 访问注意事项
+
+**症状**：
+- `http://127.0.0.1:8443` 无法访问
+- 浏览器提示"400 Bad Request"或空白页面
+
+**原因**：
+nginx 配置为 HTTPS，需要用 `https://` 协议访问。
+
+**解决方案**：
+
+```bash
+# 正确的访问方式
+https://127.0.0.1:8443
+
+# 错误的访问方式
+http://127.0.0.1:8443  ❌
+```
+
+**浏览器提示**：
+访问时会看到"不安全"或"证书无效"的警告，这是因为使用了自签名证书。
+
+**处理方式**：
+- 点击"高级"或"Advanced"
+- 点击"继续访问"或"Proceed to 127.0.0.1 (unsafe)"
+
+---
+
 ## 系统信息
 
 ### 设备信息
