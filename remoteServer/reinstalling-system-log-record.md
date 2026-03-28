@@ -274,6 +274,15 @@ This message shows that your installation appears to be working correctly.
 - 提供浏览器UI界面，可通过公网IP或域名查看ClashWeb页面
 
 ### 一键安装
+> [! warning]
+> 如果按照上文中的说明，给用户配置了sudo权限，则应避免使用sudo命令，复制的时候应当复制没有`sudo`的脚本
+> ``` bash fold
+> git clone --branch master --depth 1 https://gh-proxy.com/https://github.com/nelvko/clash-for-linux-install.git \
+  >&& cd clash-for-linux-install \
+  >&& bash install.sh
+> ```
+> 
+> PS：如有需要可展开上方代码块复制内容并使用
 
 ``` bash
 sudo git clone --branch master --depth 1 https://gh-proxy.com/https://github.com/nelvko/clash-for-linux-install.git \
@@ -281,6 +290,10 @@ sudo git clone --branch master --depth 1 https://gh-proxy.com/https://github.com
   && sudo bash install.sh
 ```
 
+安装完成后重新加载 `.bashrc`
+``` bash
+source ~/.bashrc
+```
 
 ### 设置密钥
 
@@ -308,7 +321,7 @@ system-proxy:
   enable: true
 mixed-port: 7890
 # Web 控制台配置（浏览器UI访问服务器时的端口）
-external-controller: "0.0.0.0:1001" # 可以将默认的9090端口修改为任意合法端口
+external-controller: "0.0.0.0:2001" # 可以将默认的9090端口修改为任意合法端口(尽可能不要使用1～1023的端口)
 external-ui: public
 secret: "666" # 页可以在这里配置密钥
 # 代理服务器配置
@@ -355,16 +368,16 @@ dns:
 新增规则：
 
 - 访问来源：0.0.0.0/0
-- 访问目的：1001/1001
+- 访问目的：2001/2001
 - 描述（可选）：ClashUI
 
 ### 配置并使用浏览器UI页面
 
-浏览器访问：http://<服务器IP>:1001
+浏览器访问：http://<服务器IP>:2001
 
 表单中输入：
 
-- API Base URL：http://<服务器IP>:1001
+- API Base URL：http://<服务器IP>:2001
 - Secret（配置密钥）：666
 - Label（自定义标签，有多个配置的时候方便区分）：honlnk
 - 单击“Add”

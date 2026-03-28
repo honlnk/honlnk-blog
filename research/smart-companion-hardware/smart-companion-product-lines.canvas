@@ -1,0 +1,20 @@
+{
+	"nodes":[
+		{"id":"root","type":"text","text":"# 产品形态规划","x":-50,"y":-330,"width":300,"height":100,"color":"5"},
+		{"id":"line3","type":"text","text":"## 3. 智能玩偶系列\n\n### 产品形态\n各种动物/卡通形象\n- 🐻 小熊\n- 🐰 兔子\n\n### 核心功能\n- ✅ 对话交互\n- ✅ 动作反馈","x":250,"y":-10,"width":230,"height":340,"color":"3"},
+		{"id":"line2","type":"text","text":"## 2. 家用智能花灯\n\n### 市场定位\n**ToC 高端市场**\n\n### 产品特点\n- ✅ 质量更高\n- ✅ 设计精致\n\n### 摆放场景\n家庭环境\n- 客厅\n- 卧室","x":-180,"y":-10,"width":260,"height":420,"color":"2"},
+		{"id":"line4","type":"text","text":"## 4. 成人用品创新方向 ⚠️\n\n### 市场痛点\n传统情趣用品问题\n- 心理门槛高\n\n### 创新方案\n**\"没那么情趣的情趣用品\"**\n\n#### 设计理念\n1. **去污名化**\n2. **功能隐藏**\n3. **心理友好**","x":580,"y":-10,"width":300,"height":420,"color":"6"},
+		{"id":"line1","type":"text","text":"## 1. 智能彩灯系列\n\n### 市场定位\n**B 端升级**\n\n### 应用场景\n- 景区彩灯\n- 庙会展品\n\n### 核心功能\n- ✅ 对话互动\n- ✅ 动态效果","x":-620,"y":-10,"width":300,"height":370,"color":"1"},
+		{"id":"summary","type":"text","text":"## 产品线策略总结\n\n### 渐进式发展路径\n\n**第一阶段**：智能彩灯系列（B端）\n\n**第二阶段**：家用智能花灯 + 智能玩偶\n\n**第三阶段**：成人用品创新\n\n### 核心技术复用\n所有产品线共享：\n- 对话能力（LLM）\n- 情绪识别\n- 硬件控制接口","x":-80,"y":600,"width":360,"height":420,"color":"4"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"root","fromSide":"bottom","toNode":"line1","toSide":"top","label":"第一阶段"},
+		{"id":"e3","fromNode":"root","fromSide":"bottom","toNode":"line3","toSide":"top","label":"第二阶段"},
+		{"id":"e4","fromNode":"root","fromSide":"bottom","toNode":"line4","toSide":"top","label":"第三阶段"},
+		{"id":"e5","fromNode":"line1","fromSide":"bottom","toNode":"summary","toSide":"top","label":"整合"},
+		{"id":"e6","fromNode":"line2","fromSide":"bottom","toNode":"summary","toSide":"top","label":"整合"},
+		{"id":"e7","fromNode":"line3","fromSide":"bottom","toNode":"summary","toSide":"top","label":"整合"},
+		{"id":"e8","fromNode":"line4","fromSide":"bottom","toNode":"summary","toSide":"top","label":"整合"},
+		{"id":"e2","fromNode":"root","fromSide":"bottom","toNode":"line2","toSide":"top","label":"第二阶段"}
+	]
+}

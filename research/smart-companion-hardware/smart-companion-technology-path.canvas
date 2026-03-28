@@ -1,0 +1,18 @@
+{
+	"nodes":[
+		{"id":"root","type":"text","text":"# 技术实现路径","x":0,"y":0,"width":300,"height":100,"color":"5"},
+		{"id":"tech-stack","type":"text","text":"## 技术分层总结\n\n| 层级 | 包含内容 | 可控性 |\n|------|---------|-------|\n| **用户终端软件** | APP、网页 | ✅ 高 |\n| **硬件产品** | 单片机主板 | ⚠️ 中 |\n| **云服务器** | 后端服务 | ✅ 高 |","x":-200,"y":700,"width":400,"height":240,"color":"4"},
+		{"id":"software","type":"text","text":"## 软件层面\n\n### 核心能力\n\n#### 1. 对话能力\n**技术选择**\n- 接入 LLM API\n- 或本地小模型\n\n#### 2. 情绪识别\n- 语音情感分析","x":-120,"y":280,"width":240,"height":340,"color":"2"},
+		{"id":"ai-deployment","type":"text","text":"## AI 模型部署方案\n\n### 现状\n✅ 已在配置不错的电脑上用 Ollama 部署了本地模型\n\n❌ 问题：输出速度太慢\n\n### 建议：必须使用 API","x":240,"y":320,"width":350,"height":200,"color":"3"},
+		{"id":"hardware","type":"text","text":"## 硬件层面\n\n### 现有基础\n- ✅ 单片机（MCU）\n- ✅ 基础电路设计\n- ✅ 3D 打印设备","x":545,"y":-50,"width":400,"height":200,"color":"1"},
+		{"id":"architecture","type":"text","text":"## 技术依赖关系\n\n```\n用户终端 ←→ 云服务器 ←→ AI 服务\n     ↓              ↓\n硬件产品 ←→ 机械结构\n```","x":570,"y":740,"width":350,"height":200,"color":"5"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"root","fromSide":"right","toNode":"hardware","toSide":"left","label":"硬件"},
+		{"id":"e2","fromNode":"root","fromSide":"bottom","toNode":"software","toSide":"top","label":"软件"},
+		{"id":"e3","fromNode":"root","fromSide":"bottom","toNode":"ai-deployment","toSide":"top","label":"AI"},
+		{"id":"e4","fromNode":"software","fromSide":"bottom","toNode":"tech-stack","toSide":"top","label":"整合"},
+		{"id":"e5","fromNode":"ai-deployment","fromSide":"bottom","toNode":"architecture","toSide":"top","label":"集成"},
+		{"id":"e6","fromNode":"hardware","fromSide":"bottom","toNode":"architecture","toSide":"top","label":"基础"}
+	]
+}

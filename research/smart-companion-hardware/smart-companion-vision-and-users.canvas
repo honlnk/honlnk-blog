@@ -1,0 +1,17 @@
+{
+	"nodes":[
+		{"id":"background","type":"text","text":"## 背景\n\n### 现有资源\n- ✅ 硬件产品生产渠道\n- ✅ 大型 3D 打印设备\n- ✅ 景区、庙会等 B 端市场经验\n\n### 痛点\n不甘心局限于传统彩灯制造，希望拓展产品线，打造智能化产品。","x":-390,"y":-140,"width":540,"height":300,"color":"1"},
+		{"id":"users","type":"text","text":"## 目标用户群体\n\n| 用户群体 | 需求特征 | 产品定位 |\n|---------|---------|----------|\n| **老年人** | 陪伴需求 | 日常陪伴型智能硬件 |\n| **单身人群** | 情感陪伴 | 家居摆件 + 情感交互 |\n| **自闭症患者** | 社交辅助 | 治疗性陪伴工具 |\n\n### 产品定位差异化\n\n**老年人市场**\n- 强调易用性\n- 语音交互优先\n- 健康监测集成\n\n**单身人群市场**\n- 情感连接为核心\n- 高颜值设计\n- 氛围营造功能\n\n**特殊需求市场**\n- 治疗性功能\n- 专业机构合作\n- 医疗级认证","x":-320,"y":410,"width":400,"height":700,"color":"4"},
+		{"id":"philosophy","type":"text","text":"## 陪伴理念\n\n> \"陪伴的主体可以抽象成各种各样的实体，不一定非得是人类。\"\n\n### 设计哲学\n- 非人类形态也可实现陪伴\n- 情感连接重于形态相似\n- 互动体验决定陪伴质量","x":-395,"y":1280,"width":550,"height":260,"color":"6"},
+		{"id":"vision","type":"text","text":"## 产品愿景\n\n> \"先有一个能保证最基本的对话能力的产品，让产品因为对话、场景或者用户情绪做出一系列的状态变化。\"\n\n### 核心理念\n- 对话能力为基础\n- 状态变化为反馈\n- 情绪感知为进阶","x":320,"y":350,"width":490,"height":290,"color":"5"},
+		{"id":"capabilities","type":"text","text":"## 核心能力需求\n\n### 1️⃣ 对话能力\n- 保证基本的自然语言交互\n- 理解用户意图和情绪\n\n### 2️⃣ 状态变化反馈\n#### 视觉反馈\n- 眨眼\n- 煽动翅膀\n- 彩灯变色\n\n#### 动态调整\n- 根据对话内容动态调整\n- 响应环境场景\n- 响应用户情绪\n\n### 3️⃣ 环境感知（初步设想）\n- 外部环境状态检测\n- 场景识别","x":355,"y":760,"width":420,"height":380,"color":"3"},
+		{"id":"root","type":"text","text":"# 智能陪伴硬件产品\n\n# **商业构想与技术路径探讨**","x":390,"y":-60,"width":350,"height":140,"color":"5"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"root","fromSide":"left","toNode":"background","toSide":"right","label":"出发点"},
+		{"id":"e2","fromNode":"root","fromSide":"bottom","toNode":"vision","toSide":"top","label":"愿景"},
+		{"id":"e3","fromNode":"vision","fromSide":"bottom","toNode":"capabilities","toSide":"top","label":"具体化为"},
+		{"id":"e4","fromNode":"background","fromSide":"bottom","toNode":"users","toSide":"top","label":"基于市场经验定位"},
+		{"id":"e5","fromNode":"users","fromSide":"bottom","toNode":"philosophy","toSide":"top","label":"设计理念"}
+	]
+}
