@@ -20,6 +20,9 @@
     "vue-component": {
         "description": "vue组件"
     },
+    "network-tools": {
+        "description": "网络工具"
+    },
     "web-testing": {
         "description": "网络测试"
     }

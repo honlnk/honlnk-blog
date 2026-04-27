@@ -4,6 +4,7 @@
 .trash/
 
 .obsidian/plugins/obsidian-image-auto-upload-plugin/data.json
+.obsidian/plugins/better-export-pdf/data.json
 
 # macOS system files
 .DS_Store
