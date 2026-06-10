@@ -554,15 +554,35 @@ scp deploy/compose/docker-compose.prod.yml volcano-honlnk:/home/honlnk/dai-dai-c
 五个域名均使用 certbot standalone 模式签发，通过 root crontab 实现自动续期：
 
 ``` fold title:crontab 定时任务
-0 3 * * * docker stop honlnk-gateway && certbot renew --quiet && /home/honlnk/honlnk-gateway/renew-hook.sh
+0 3 * * * certbot renew --quiet --pre-hook "docker stop honlnk-gateway" --post-hook "/home/honlnk/honlnk-gateway/renew-hook.sh"
 ```
+
+> [!note] 为什么用 pre-hook / post-hook
+> `honlnk-gateway` 占用宿主机 80/443，certbot standalone 验证需要临时监听 80 端口，所以续期前必须停止 `honlnk-gateway`。续期后还需要执行 `renew-hook.sh`，把 `/etc/letsencrypt/archive/` 中的新证书复制到各服务挂载目录，并重载相关容器。把这两个动作写成 certbot 的 hook，比简单串联 `docker stop && certbot renew && hook` 更清晰，也避免中间命令失败时行为不明确。
+
+服务器上 certbot 安装包自带的 `certbot.timer` 已关闭，避免出现两套不一致的续期入口：
+
+```bash fold title:关闭并检查 certbot.timer
+sudo systemctl disable --now certbot.timer
+systemctl status certbot.timer
+systemctl list-timers --all | grep certbot
+sudo crontab -l
+```
+
+期望状态：
+
+- `certbot.timer` 为 `disabled` / `inactive`
+- `systemctl list-timers --all | grep certbot` 没有 active timer
+- `sudo crontab -l` 中保留上面的凌晨 3 点任务
 
 ### 执行流程
 
-1. 凌晨 3 点停掉 honlnk-gateway（释放 80 端口）
-2. certbot 检查证书是否快过期（< 30 天），是则续期
-3. renew-hook.sh 拷贝最新证书到各服务目录（固定文件名）
-4. 启动 honlnk-gateway 并重载 Nginx
+1. 凌晨 3 点由 root crontab 执行 `certbot renew`
+2. certbot 通过 `--pre-hook` 停掉 honlnk-gateway（释放 80 端口）
+3. certbot 检查证书是否快过期（< 30 天），是则续期
+4. certbot 通过 `--post-hook` 执行 renew-hook.sh
+5. renew-hook.sh 拷贝最新证书到各服务目录（固定文件名）
+6. renew-hook.sh 启动 honlnk-gateway 并重载 Nginx
 
 ### 中断时间
 
