@@ -47,7 +47,7 @@ honlnk-gateway（全局网关，Nginx 容器）
   │
   ├─ piclist.honlnk.top → piclist-app:36677（PicList 图床）
   │
-  ├─ honlnk-obsidian.honlnk.top → 阿里云 OSS 反代（图片访问，自带 HTTPS）
+  ├─ honlnk-obsidian.honlnk.top → 阿里云 OSS 反代（网关终结 HTTPS，回源 OSS）
   │
   └─ daidai.honlnk.top / api.daidai.honlnk.top / mqtt.daidai.honlnk.top
      → dai-dai-gateway:443（HTTPS→HTTPS 转发，避免无限重定向）
@@ -537,6 +537,9 @@ scp deploy/compose/docker-compose.prod.yml volcano-honlnk:/home/honlnk/dai-dai-c
 
 ## 证书自动续期
 
+> [!info] 通用方案文档
+> 以下内容是一篇**独立的通用方案**的实战案例。如果只需要了解 certbot + Docker 的自动续期方法（适用于任何服务器），请阅读 [[ssl-cert-auto-renewal-guide]]。
+
 ### 管理的域名
 
 | 域名 | 证书存放位置 | 证书文件名 |
@@ -578,15 +581,21 @@ sudo crontab -l
 ### 执行流程
 
 1. 凌晨 3 点由 root crontab 执行 `certbot renew`
-2. certbot 通过 `--pre-hook` 停掉 honlnk-gateway（释放 80 端口）
-3. certbot 检查证书是否快过期（< 30 天），是则续期
-4. certbot 通过 `--post-hook` 执行 renew-hook.sh
-5. renew-hook.sh 拷贝最新证书到各服务目录（固定文件名）
-6. renew-hook.sh 启动 honlnk-gateway 并重载 Nginx
+2. certbot 先检查所有证书的剩余有效期
+3. **若无证书需要续期（剩余 > 30 天）**：certbot 直接退出，**不执行任何 hook，honlnk-gateway 全程运行，无中断**
+4. 若有证书需要续期（剩余 ≤ 30 天）：
+   1. certbot 通过 `--pre-hook` 停掉 honlnk-gateway（释放 80 端口）
+   2. certbot 签发新证书（archive 目录生成递增编号文件）
+   3. certbot 通过 `--post-hook` 执行 `renew-hook.sh`
+   4. renew-hook.sh 从 archive 目录拷贝最新证书到各服务目录（固定文件名）
+   5. renew-hook.sh 启动 honlnk-gateway 并 `nginx -s reload`，重启不支持热重载的服务（mosquitto）
+
+> [!important] hook 只在真正续签时触发
+> `--pre-hook` / `--post-hook` 都属于"续签尝试"的一部分，证书未到期时 certbot 不会触发它们。所以日常（证书充足时）cron 跑 `certbot renew` 不会停容器，零中断。
 
 ### 中断时间
 
-- 证书未过期时：certbot 跳过续期，仅中断 **2-3 秒**
+- 证书未过期时：**不中断**（不执行 hook，容器全程运行）
 - 证书需要续期时：中断约 **5-10 秒**
 
 ### renew-hook.sh 脚本详解
@@ -595,44 +604,107 @@ sudo crontab -l
 
 ```bash fold title:renew-hook.sh 脚本
 #!/usr/bin/env bash
+# SSL 证书续期后处理脚本
+# 日志文件：/home/honlnk/honlnk-gateway/renew.log
+
 LOG_FILE="/home/honlnk/honlnk-gateway/renew.log"
 
-# 第1部分：piclist.honlnk.top
-# certbot archive 递增编号 → 拷贝为固定文件名 fullchain.pem / privkey.pem
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
+}
+
+log "========== 证书续期任务开始 =========="
+
+RENEWED=false
+
+# ===== 第1部分：piclist.honlnk.top → /home/honlnk/piclist/ssl =====
 PICLIST_SRC="/etc/letsencrypt/archive/piclist.honlnk.top"
 PICLIST_DST="/home/honlnk/piclist/ssl"
-# ls -t 按时间排序取最新，cp -f 覆盖为固定文件名
 
-# 第2部分：honlnk-obsidian.honlnk.top
-# 同理，拷贝到 /home/honlnk/oss/ssl/
+LATEST_FULLCHAIN=$(ls -t "$PICLIST_SRC"/fullchain*.pem 2>/dev/null | head -1)
+LATEST_PRIVKEY=$(ls -t "$PICLIST_SRC"/privkey*.pem 2>/dev/null | head -1)
+
+if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
+    cp -f "$LATEST_FULLCHAIN" "$PICLIST_DST/fullchain.pem"
+    cp -f "$LATEST_PRIVKEY" "$PICLIST_DST/privkey.pem"
+    log "已更新 piclist.honlnk.top 证书"
+    RENEWED=true
+fi
+
+# ===== 第2部分：honlnk-obsidian.honlnk.top → /home/honlnk/oss/ssl =====
 OSS_SRC="/etc/letsencrypt/archive/honlnk-obsidian.honlnk.top"
 OSS_DST="/home/honlnk/oss/ssl"
 
-# 第3部分：mqtt.daidai.honlnk.top
-# mosquitto 不支持证书热重载，续期后需要重启容器
+LATEST_FULLCHAIN=$(ls -t "$OSS_SRC"/fullchain*.pem 2>/dev/null | head -1)
+LATEST_PRIVKEY=$(ls -t "$OSS_SRC"/privkey*.pem 2>/dev/null | head -1)
+
+if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
+    cp -f "$LATEST_FULLCHAIN" "$OSS_DST/fullchain.pem"
+    cp -f "$LATEST_PRIVKEY" "$OSS_DST/privkey.pem"
+    log "已更新 honlnk-obsidian.honlnk.top 证书"
+    RENEWED=true
+fi
+
+# ===== 第3部分：mqtt.daidai.honlnk.top → /home/honlnk/dai-dai-infra/certs/mqtt =====
+# mosquitto 不支持证书热重载，续期后必须重启容器
 MQTT_SRC="/etc/letsencrypt/archive/mqtt.daidai.honlnk.top"
 MQTT_DST="/home/honlnk/dai-dai-infra/certs/mqtt"
-# 拷贝为 mqtt.daidai.honlnk.top_bundle.pem / mqtt.daidai.honlnk.top.key
-docker restart dai-dai-mqtt  # 必须重启
 
-# 第4部分：dai-dai web 系列（daidai.honlnk.top、api.daidai.honlnk.top）
+LATEST_FULLCHAIN=$(ls -t "$MQTT_SRC"/fullchain*.pem 2>/dev/null | head -1)
+LATEST_PRIVKEY=$(ls -t "$MQTT_SRC"/privkey*.pem 2>/dev/null | head -1)
+
+if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
+    cp -f "$LATEST_FULLCHAIN" "$MQTT_DST/mqtt.daidai.honlnk.top_bundle.pem"
+    cp -f "$LATEST_PRIVKEY" "$MQTT_DST/mqtt.daidai.honlnk.top.key"
+    log "已更新 mqtt.daidai.honlnk.top 证书"
+    docker restart dai-dai-mqtt 2>/dev/null   # 必须重启（mosquitto 不支持热重载）
+    log "已重启 dai-dai-mqtt 容器"
+    RENEWED=true
+fi
+
+# ===== 第4部分：dai-dai web 系列（daidai.honlnk.top、api.daidai.honlnk.top）=====
 # 证书存放在 dai-dai-infra 原有位置，文件名保持与腾讯云时代一致
 # 这样 Nginx 配置和 docker-compose 挂载都不用改
+DAIDAI_DOMAINS=("daidai.honlnk.top" "api.daidai.honlnk.top")
+
 for domain in "${DAIDAI_DOMAINS[@]}"; do
-    cp -f "$LATEST_FULLCHAIN" "/home/honlnk/dai-dai-infra/certs/web/$domain/${domain}_bundle.pem"
-    cp -f "$LATEST_PRIVKEY" "/home/honlnk/dai-dai-infra/certs/web/$domain/${domain}.key"
+    SRC="/etc/letsencrypt/archive/$domain"
+    DST="/home/honlnk/dai-dai-infra/certs/web/$domain"
+
+    LATEST_FULLCHAIN=$(ls -t "$SRC"/fullchain*.pem 2>/dev/null | head -1)
+    LATEST_PRIVKEY=$(ls -t "$SRC"/privkey*.pem 2>/dev/null | head -1)
+
+    if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
+        cp -f "$LATEST_FULLCHAIN" "$DST/${domain}_bundle.pem"
+        cp -f "$LATEST_PRIVKEY" "$DST/${domain}.key"
+        log "已更新 $domain 证书"
+        RENEWED=true
+    fi
 done
 
-# 最后：启动网关 + 重载 Nginx
-docker start honlnk-gateway
+# ===== 最后：启动网关 + 重载 Nginx =====
+if [ "$RENEWED" = true ]; then
+    log "证书已更新，重启网关容器"
+else
+    log "证书未变化，无需更新"
+fi
+
+docker start honlnk-gateway 2>/dev/null
 sleep 2
-docker exec honlnk-gateway nginx -s reload
+docker exec honlnk-gateway nginx -s reload 2>/dev/null
+log "Nginx 已重载"
+log "========== 证书续期任务结束 =========="
+echo "" >> "$LOG_FILE"
 ```
 
-**核心逻辑**：certbot 每次续期生成递增编号的文件（`fullchain1.pem` → `fullchain2.pem` → ...），脚本通过 `ls -t | head -1` 取最新文件，拷贝为固定文件名供 Nginx 使用。
+**核心逻辑**：certbot 每次续期生成递增编号的文件（`fullchain1.pem` → `fullchain2.pem` → ...），脚本通过 `ls -t | head -1` 按修改时间排序取最新文件，拷贝为固定文件名供 Nginx 使用。这样无论续期多少次，Nginx 配置和容器挂载都不需要改动。
 
-> [!note] MQTT 证书特殊性
-> `mqtt.daidai.honlnk.top` 走 mosquitto 容器自身的 TLS（8883 端口），不走 honlnk-gateway。证书更新后需要重启 mosquitto 容器（不支持热重载）。
+> [!note] MQTT 证书的双路径
+> `mqtt.daidai.honlnk.top` 同时承载两条 TLS 路径，**两条路径用的是同一张证书**：
+> - **443 端口（MQTT over WebSocket / WSS）**：由 `honlnk-gateway` 终结 TLS，证书挂载在网关上，更新后随网关 `nginx -s reload` 生效
+> - **8883 端口（标准 MQTT over TLS）**：由 `dai-dai-mqtt`（mosquitto）容器直接监听，证书挂载在 mosquitto 上
+>
+> mosquitto **不支持 TLS 证书热重载**，所以续期后无论 443 路径是否需要，都必须 `docker restart dai-dai-mqtt` 才能让 8883 路径加载新证书。
 
 ### 日志文件
 
