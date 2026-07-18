@@ -120,9 +120,16 @@ git push -u origin v5
 # 3. 把 GitHub 默认分支改成 main
 gh repo edit <你的用户名>/<框架仓> --default-branch main
 
-# 4. 后续业务改动都在 main 上做
+# 4. 修正 main 的上游追踪关系
+#    （git branch -m 会继承 origin/v5 的追踪关系，导致 git status 误报"未推送"）
+git branch --set-upstream-to=origin/main main
+
+# 5. 后续业务改动都在 main 上做
 git checkout main
 ```
+
+> [!warning] 第 4 步必须做，否则 git status 会误报
+> `git branch -m v5 main` 改名时，main 会继承 v5 的上游追踪（`origin/v5`）。这样 `git status` / VSCode 会一直显示"本地 main 比 origin/v5 领先 N 个提交，未推送"——其实是追踪关系错了，实际 push 早就成功了。第 4 步把追踪改成 `origin/main` 后，状态显示才正常。
 
 > [!note] 两个分支的职责
 > - **`v5`**：上游镜像层，保持和 Quartz 官方一致，**不直接写业务**
@@ -222,6 +229,24 @@ ls quartz.lock.json
 ## 第 7 步：编写 CI 部署工作流
 
 创建 `.github/workflows/deploy.yml`：
+
+> [!warning] 创建前先清理上游残留的 CI 和依赖更新配置
+> clone Quartz 带下来的 `.github/workflows/` 里有 5 个上游 CI（`build-preview.yaml` / `ci.yaml` / `deploy-preview.yaml` / `deploy-v5.yaml` / `docker-build-push.yaml`），以及 `.github/dependabot.yml`。这 6 个文件会自动触发：
+> - 每次你 push/PR，上游 CI 都会跑（多半失败，浪费 Actions 额度）
+> - dependabot 会持续给上游依赖提 PR（每周刷屏）
+>
+> 写自己的 deploy.yml 前，先把它们删掉：
+>
+> ```bash
+> git rm .github/workflows/build-preview.yaml \
+>        .github/workflows/ci.yaml \
+>        .github/workflows/deploy-preview.yaml \
+>        .github/workflows/deploy-v5.yaml \
+>        .github/workflows/docker-build-push.yaml \
+>        .github/dependabot.yml
+> ```
+>
+> 其他上游文件（`FUNDING.yml` / `ISSUE_TEMPLATE/` / `pull_request_template.md` / `CODE_OF_CONDUCT.md` / `Dockerfile`）是纯静态治理文件，对项目零影响，**遵循"只覆盖不删上游"原则保留**。
 
 ```yaml
 name: Deploy blog to GitHub Pages
