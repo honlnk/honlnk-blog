@@ -204,12 +204,29 @@ jobs:
           submodules: recursive
 
       # 2. 把 submodule 更新到笔记仓 master 最新
+      #    必须完整拉取（--unshallow）：submodule 默认是浅克隆，
+      #    下一步还原笔记修改时间需要完整 git 历史
       - name: Update notes submodule to latest
         run: |
-          git -C content/notes fetch --depth 1 origin master
+          git -C content/notes fetch --unshallow origin master 2>/dev/null \
+            || git -C content/notes fetch origin master
           git -C content/notes checkout origin/master
 
-      # 3. 构建
+      # 3. 按笔记的 git 提交时间还原文件 mtime
+      #    actions/checkout 会把所有文件 mtime 重置为 checkout 时刻，
+      #    导致博客上所有笔记的修改时间都显示成"今天"。
+      #    这里遍历每个文件，用它的 git 最后提交时间覆盖回去。
+      - name: Restore notes mtime from git history
+        run: |
+          cd content/notes
+          git ls-files -z | while IFS= read -r -d '' f; do
+            mtime=$(git log -1 --format='%ct' "$f" 2>/dev/null)
+            if [ -n "$mtime" ]; then
+              touch -d "@$mtime" "$f"
+            fi
+          done
+
+      # 4. 构建
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -221,7 +238,7 @@ jobs:
       - run: npx quartz plugin install --from-config
       - run: npx quartz build
 
-      # 4. 写入自定义域名（没有自定义域名就删掉这步）
+      # 5. 写入自定义域名（没有自定义域名就删掉这步）
       - run: echo "<你的域名>" > public/CNAME
       - uses: actions/upload-pages-artifact@v5
         with:
@@ -414,59 +431,6 @@ npx quartz build --serve       # 本地验证
 
 # 3. 验证通过后推送，触发部署
 git push origin main
-```
-
-## 故障排查
-
-### 部署后博客没更新
-
-按数据流顺序排查：
-
-```bash
-# 1. 笔记仓的 trigger 跑了吗？
-gh run list --repo <你的用户名>/<笔记仓> --limit 1
-# 报红 → 多半是 BLOG_SITE_PAT 过期或权限错（应为 Contents:write）
-
-# 2. 框架仓的 deploy 触发了吗？
-gh run list --repo <你的用户名>/<框架仓> --limit 1
-# 没触发 → 手动跑一次：
-gh workflow run deploy.yml --repo <你的用户名>/<框架仓>
-
-# 3. deploy 报错了？
-gh run view --log-failed --repo <你的用户名>/<框架仓>
-```
-
-### 首页显示 XML 而非 HTML
-
-检查 `content/index.md` 是否存在且已入库：
-
-```bash
-git ls-files content/index.md
-# 空输出 = 没入库，git add content/index.md && git commit && git push
-```
-
-### 笔记内容没出现在博客上
-
-```bash
-# 1. 笔记仓 push 成功了吗？
-git -C content/notes log --oneline -1   # 应该是最新提交
-
-# 2. CI 里 submodule 更新了吗？看 deploy.yml 的日志：
-gh run view --repo <你的用户名>/<框架仓> --log | grep -A3 "Update notes submodule"
-```
-
-### `deploy` 报 "Branch X is not allowed to deploy to github-pages"
-
-改过默认分支名后，GitHub Pages 的 environment 分支白名单没同步。修复：
-
-```bash
-# 查看当前允许的分支
-gh api repos/<你的用户名>/<框架仓>/environments/github-pages/deployment-branch-policies \
-  --jq '.branch_policies[] | .name'
-
-# 加上新分支
-gh api --method POST repos/<你的用户名>/<框架仓>/environments/github-pages/deployment-branch-policies \
-  -f name=main
 ```
 
 ## 目录结构速查
