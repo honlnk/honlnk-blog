@@ -91,8 +91,17 @@ npx quartz create \
   --links shortest
 ```
 
-> [!note] 这一步生成了什么
-> `npx quartz create` 会生成完整的 `quartz.config.yaml`（含 ~40 个社区插件清单、layout 编排、默认主题）和 `quartz.lock.json`（锁版本）。**这些是后续步骤的基础，不要手删 `plugins:` / `layout:` 段**。后续在第 6 步只改 `configuration:` 段的几个字段。
+> [!note] 这一步做了什么（比想象的多）
+> `npx quartz create` 不只是生成配置，它一次性完成三件事：
+> 1. **生成 `quartz.config.yaml`**——含 ~40 个社区插件清单、layout 编排、默认主题
+> 2. **clone 并 build 所有社区插件**——44 个插件全部下载、编译、装到 `.quartz/plugins/`
+> 3. **更新 `quartz.lock.json`**——锁定每个插件的 commit 哈希，供 CI 按此安装
+>
+> 另外它还会：
+> - **生成默认首页 `content/index.md`**（英文版 "Welcome to Quartz"，第 5 步会覆盖成中文）
+> - **删除 `content/.gitkeep`**（被 index.md 取代，正常现象）
+>
+> 后续在第 6 步只改 `configuration:` 段的几个字段，**不要手删 `plugins:` / `layout:` 段**。
 
 ## 第 3 步：建立 main / v5 双分支
 
@@ -135,12 +144,11 @@ git submodule add https://github.com/<你的用户名>/<笔记仓>.git content/n
 > - **方案 A（推荐）**：把笔记仓设为公开。Obsidian vault 一般没什么隐私（私人内容用 `.obsidian/` 或 `private/` 目录隔离，已被 `ignorePatterns` 排除）。
 > - **方案 B**：笔记仓保持私有，但要在第 7 步 deploy.yml 的 checkout 步骤里加 token 参数（用 PAT 作为 submodule 鉴权），见[官方文档](https://github.com/actions/checkout#usage)。
 
-## 第 5 步：创建首页 `content/index.md`
+## 第 5 步：覆盖默认首页 `content/index.md`
 
-> [!warning] 这一步必须做，否则首页会显示成 XML
-> 如果 `content/` 根目录没有 `index.md`，Quartz 不会生成 `index.html`，访问站点根路径会回退到 RSS feed（显示成一段 XML）。这是这套架构最常见的"踩坑第一站"。
+第 2 步 `npx quartz create` 已经生成了一个英文默认首页 `content/index.md`（内容是 "Welcome to Quartz"）。这一步把它覆盖成你自己的中文首页。
 
-`content/index.md` 是框架仓自有的首页模板（不进笔记仓），自定义站点首页：
+直接编辑 `content/index.md`，替换成下面的内容（按自己情况调整文案）：
 
 ```markdown
 ---
@@ -168,12 +176,11 @@ title: <你的站点名>
 > 本博客基于 [Quartz v5](https://quartz.jzhao.xyz/) 搭建。
 ```
 
-提交这个文件时，确认它真的进了版本控制（被 `.gitignore` 放行）：
+> [!note] 什么情况下首页会显示成 XML？
+> 只有当 `content/index.md` **完全不存在**时，Quartz 才不会生成 `index.html`，访问站点根路径会回退到 RSS feed（显示成 XML）。正常走第 2 步 `npx quartz create` 会自带默认 index.md，**不会踩到这个坑**。历史上这个坑出现在手动 `rm -rf content` 又没补 index.md 的场景，按本教程流程走不会遇到。
 
-```bash
-git add content/index.md
-git ls-files content/index.md   # 应该输出文件名，空输出说明没入库
-```
+> [!warning] 笔记仓根目录不要放 index.md
+> 第 1 步已经提过，这里再强调：笔记仓（`content/notes/`）根目录不要有 `index.md`，否则会和框架仓的首页冲突。框架仓的 `content/index.md` 是站点根首页，笔记仓的 `notes/index.md` 会变成 `/notes/` 子目录首页——两者路由隔离但容易混淆，建议笔记仓不要在根目录放 index.md。
 
 ## 第 6 步：配置站点 `quartz.config.yaml`
 
@@ -507,9 +514,9 @@ git push origin main
 ├── quartz.lock.json          # 社区插件版本锁（CI 按此装，不拉 latest）
 ├── quartz.config.default.yaml # 上游默认配置模板（npx quartz create 的来源）
 ├── content/
-│   ├── index.md              # 首页模板（框架仓自有，入库）
-│   ├── .gitkeep              # 占位（上游 Quartz 用来保留 content/ 目录）
+│   ├── index.md              # 首页（框架仓自有，覆盖默认英文版后入库）
 │   └── notes/                # 笔记仓 submodule（不入主仓历史）
+│                            # 注：上游的 content/.gitkeep 在 npx quartz create 后会被 index.md 取代删除，正常现象
 ├── .gitmodules               # submodule 配置（指向笔记仓）
 ├── .gitignore                # 忽略 node_modules/public/.quartz/ 等
 ├── .github/workflows/
