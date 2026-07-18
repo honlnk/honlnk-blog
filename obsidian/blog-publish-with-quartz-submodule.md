@@ -150,6 +150,77 @@ await globby(pattern, {
 
 这是个**两难矛盾**，普通目录方案无法同时满足"不入库"和"能构建"。
 
+### 坑 3：submodule 笔记的修改时间全变成"今天"
+
+> [!warning] 现象
+> 上线后发现**所有笔记的修改时间都显示为今天**（CI 运行那天），包括一年前写的老笔记。排序和日期全部失效。
+
+**根因有两层，叠加导致**：
+
+**第 1 层：submodule 默认浅克隆**
+
+`git submodule add` 默认只拉**浅层历史**（几个 commit），不是完整历史。即使 `git fetch origin`，也只会显示"up to date"——因为 ref 是最新的，但 commit 对象不完整，`git log` 走到断点就停。
+
+```
+远端 honlnk/honlnk-blog：    94 个 commit（完整）
+submodule 本地 content/notes： 只有 4 个 commit（浅克隆）
+```
+
+**第 2 层：`actions/checkout` 重置 mtime**
+
+即使 submodule 历史完整，`actions/checkout` 检出文件时会把**所有文件的 mtime 重置为 checkout 那一刻**（CI 运行时），而不是 git 历史里的真实时间。
+
+**第 3 层：Quartz 插件优先读 filesystem mtime**
+
+查看 `created-modified-date` 插件源码（`.quartz/plugins/created-modified-date/src/transformer.ts`）：
+
+```ts
+for (const source of opts.priority) {
+  if (source === "filesystem") {
+    modified ||= st.mtimeMs;                    // ← 优先读文件系统 mtime
+  } else if (source === "git" && repo) {
+    modified ||= await repo.getFileLatestModifiedDateAsync(...);  // 最后才读 git
+  }
+}
+```
+
+即使配置 `priority: [frontmatter, git, filesystem]`，`git` 来源也拿不到正确时间——因为插件用 `Repository.discover(ctx.argv.directory)` 定位 git 仓库，`ctx.argv.directory` 是 `content`（框架仓内容目录），往上找到的是**框架仓的 `.git`**，而不是 submodule 的 `.git`。框架仓不跟踪 submodule 内部文件，查询失败，最终回退到 filesystem（被重置过的 mtime）。
+
+**排查过程的弯路（记录于此警示未来）**：
+
+| 诊断轮次 | 假设 | 结论 |
+|---|---|---|
+| 第 1 轮 | `--depth 1` fetch 太浅 | ❌ 错误，已 revert |
+| 第 2 轮 | 远端历史被误操作丢失 | ❌ 虚惊，远端 94 commit 完整 |
+| 第 3 轮 | **浅克隆 + mtime 重置 + 插件读 git 失败** | ✅ 真根因 |
+
+> [!danger] 诊断教训
+> 看到 submodule 只有 4 个 commit 时，一度以为是自己之前 cherry-pick 误操作导致远端历史丢失，差点强推恢复。**幸好多查一步**——用 GitHub API 直接核实远端 commit 数（94 个），才发现远端是完整的，问题只在 submodule 本地。**强推前必须核实"远端真的缺吗"**，否则反而可能造成真正的事故。
+
+**修复方案**：在 CI 构建前增加两步（见 `deploy.yml`）：
+
+```yaml
+# 1. 完整拉取 submodule 历史（unshallow）
+- name: Update notes submodule to latest
+  run: |
+    git -C content/notes fetch --unshallow origin master 2>/dev/null \
+      || git -C content/notes fetch origin master
+    git -C content/notes checkout origin/master
+
+# 2. 用 git 真实时间修复 mtime（绕过插件读 git 失败的问题）
+- name: Restore notes mtime from git history
+  run: |
+    cd content/notes
+    git ls-files -z | while IFS= read -r -d '' f; do
+      mtime=$(git log -1 --format='%ct' "$f" 2>/dev/null)
+      if [ -n "$mtime" ]; then
+        touch -d "@$mtime" "$f"     # Linux touch 支持 -d @timestamp
+      fi
+    done
+```
+
+第 2 步是关键——既然插件读不到 submodule 的 git 时间，就直接把 git 时间**写进文件 mtime**，让插件从 filesystem 来源也能拿到真实值。`touch` 用 Linux 语法（CI 是 Ubuntu），`@timestamp` 是 unix 时间戳格式。
+
 ### 最终方案：git submodule
 
 > [!success] 采用的方案
