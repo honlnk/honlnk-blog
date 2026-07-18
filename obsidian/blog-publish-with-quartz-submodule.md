@@ -62,6 +62,44 @@ status: completed
 | `honlnk/honlnk-blog` | 数据源（笔记仓） | Obsidian vault，只管写笔记 |
 | `honlnk/honlnk-blog-site` | 框架仓（本仓） | Quartz 配置、首页模板、CI 部署 |
 
+## 分支拓扑：main（业务层）+ v5（上游镜像层）
+
+框架仓采用**双分支分层**设计，隔离业务定制与上游代码：
+
+```
+upstream/v5 (Quartz 官方)
+    │  纯净上游，含官方 workflow（ci/build-preview/docker 等）
+    │
+    │  git fetch upstream && git merge upstream/v5
+    ▼
+origin/v5 (上游镜像层 / 缓冲区)
+    │  和 upstream/v5 保持 0 diff
+    │  作用：接收上游更新的缓冲层，升级冲突在这里解决
+    │
+    │  git checkout main && git merge v5
+    ▼
+origin/main (业务层，默认分支)
+    │  所有自有定制：deploy.yml、首页模板、文档、submodule
+    │  CI 从这里构建部署
+    └─→ blog.honlnk.com
+```
+
+**为什么要分两层**：
+
+- 直接在 `v5` 上做业务，会和上游同名分支语义混淆（`upstream/v5` 是 Quartz 版本线，不是业务分支）
+- 上游出 v6 时，`v5` 这个名字会变成历史遗留
+- 两层缓冲让"上游同步"和"业务开发"彻底解耦——冲突在 v5 解决，不污染 main 的历史
+
+**两个分支的职责**：
+
+| 分支 | 作用 | 谁在上面写 |
+|---|---|---|
+| `v5` | 上游镜像，保持和 `upstream/v5` 完全一致 | 只接收 upstream 合并，**不直接写业务** |
+| `main` | 业务层，默认分支，CI 构建 | 所有自有定制都在这里提交 |
+
+> [!warning] 别在 v5 上直接做业务改动
+> v5 的职责是"纯净上游镜像"。如果在 v5 上直接写业务，下次 `merge upstream/v5` 时会和你的改动冲突，违背"缓冲层"的设计意图。业务改动一律在 main 上做。
+
 ## 关键设计决策与踩过的坑
 
 这一节是全文重点——记录几个看似可行实则踩坑的方案，以及为什么最终选 submodule。
@@ -143,6 +181,25 @@ git remote add origin git@github.com:honlnk/honlnk-blog-site.git
 npm i
 npx quartz create --template default --strategy new \
   --baseUrl blog.honlnk.com --links shortest
+```
+
+然后建立 main/v5 双分支拓扑（详见上一节"分支拓扑"）：
+
+```bash
+# 当前在 v5 分支（从上游 clone 来的）
+# 1. 把 v5 改名为 main（业务层，保留所有改动历史）
+git branch -m v5 main
+git push -u origin main
+
+# 2. 从 upstream 重新建一个纯净的 v5 分支（上游镜像层）
+git branch v5 upstream/v5
+git push -u origin v5
+
+# 3. 把 GitHub 默认分支改成 main
+gh repo edit honlnk/honlnk-blog-site --default-branch main
+
+# 4. 回到 main 做后续所有业务改动
+git checkout main
 ```
 
 > [!tip] upstream 的价值
@@ -333,11 +390,34 @@ npx quartz build --serve   # → http://localhost:8080
 
 ## 升级 Quartz
 
+升级走 **v5 → main 两层缓冲**，冲突在 v5 解决，不污染 main：
+
 ```bash
-npx quartz update   # 拉取上游 v5 最新代码并合并
+cd honlnk-blog-site
+
+# 1. 先 fetch 上游最新
+git fetch upstream
+
+# 2. 在 v5（上游镜像层）合并 upstream/v5 的更新
+git checkout v5
+git merge upstream/v5
+git push origin v5
+
+# 3. 切到 main，把更新过的 v5 合进来
+git checkout main
+git merge v5
+# 如有冲突，在 main 上解决（通常是配置文件的合并，很少）
+npm install          # 依赖可能变了
+npx quartz build --serve   # 本地验证构建无误
+
+# 4. 验证通过后推送，触发部署
+git push origin main
 ```
 
 由于所有自有定制都是"覆盖/新增"（配置文件、首页模板、CI、文档），没有修改 `quartz/` 源码，升级时基本零冲突。
+
+> [!note] 为什么要两层
+> 如果直接在 main 上 `merge upstream/v5`，上游的官方 workflow（`ci.yaml`、`docker-build-push.yaml` 等）会和你的 `deploy.yml` 混在同一个分支。用 v5 当缓冲层，可以让 v5 保持"纯净上游"（含官方 workflow），main 只管业务，职责清晰隔离。
 
 ## 故障排查
 
@@ -363,6 +443,48 @@ npx quartz update   # 拉取上游 v5 最新代码并合并
 | 图片不显示 | 图片没在笔记仓内，或用了绝对路径 |
 | 日期显示为今天 | 笔记未被 git 跟踪（本地新文件），push 后 CI 用真实 git 时间 |
 
+### deploy 报 "Branch X is not allowed to deploy to github-pages"
+
+改过默认分支名（比如 v5 → main）后，deploy 的 build 成功了但 deploy 步骤报：
+
+```
+Branch "main" is not allowed to deploy to github-pages due to environment protection rules.
+```
+
+原因：GitHub Pages 的 `github-pages` environment 有**分支白名单**，改默认分支后白名单不会自动更新。修复：
+
+```bash
+# 看当前允许哪些分支部署
+gh api repos/honlnk/honlnk-blog-site/environments/github-pages/deployment-branch-policies \
+  --jq '.branch_policies[] | .name'
+
+# 加上新分支（main）
+gh api --method POST repos/honlnk/honlnk-blog-site/environments/github-pages/deployment-branch-policies \
+  -f name=main
+
+# 删掉旧分支（v5）的策略（用上一步查到的 id）
+gh api --method DELETE repos/honlnk/honlnk-blog-site/environments/github-pages/deployment-branch-policies/<ID>
+```
+
+> [!warning] 这是个隐蔽坑
+> 改分支名时容易漏这一步——因为 build 能成功（代码没问题），只有 deploy 步骤才会暴露。报错信息里的 "environment protection rules" 不直接说"分支白名单"，要绕个弯才想到。
+
+### submodule 指针长期落后笔记仓 master
+
+**这是正常现象，不是 bug**。框架仓里的 `content/notes` submodule 锁定的是某个 commit，但 CI 每次构建都会用 `git checkout origin/master` 跳过锁，直接拉笔记仓最新——所以**只在笔记仓 push，博客照样自动更新**，不用动框架仓。
+
+如果想让框架仓的 submodule 指针也保持最新（纯美观/整洁目的）：
+
+```bash
+cd honlnk-blog-site
+git -C content/notes checkout master   # 切到最新
+git add content/notes
+git commit -m "chore: 同步笔记 submodule 指针"
+git push
+```
+
+但**不做也完全不影响博客工作**。
+
 ## 目录结构总览
 
 ```
@@ -372,13 +494,23 @@ honlnk-blog-site/
 ├── content/
 │   ├── index.md              # 框架仓首页模板（入库）
 │   ├── .gitkeep
-│   └── notes/                # 笔记仓 submodule
+│   └── notes/                # 笔记仓 submodule（指向 honlnk/honlnk-blog）
 ├── .gitmodules               # submodule 配置
 ├── .github/workflows/
-│   └── deploy.yml            # 构建 + 部署
+│   └── deploy.yml            # 构建 + 部署（只在 main 分支生效）
 ├── quartz/                   # Quartz v5 核心（上游，勿改）
 └── docs/project/             # 项目文档
 ```
+
+**分支结构**：
+
+| 分支 | 内容 | 用途 |
+|---|---|---|
+| `main`（默认） | 业务层：自定义配置、首页、CI、submodule | 日常提交，CI 从这构建部署 |
+| `v5` | 纯净上游镜像，和 `upstream/v5` 保持一致 | 接收 Quartz 更新的缓冲层 |
+| `upstream/v5` | Quartz 官方代码（remote 跟踪） | `git fetch upstream` 时更新 |
+
+
 
 ## 相关笔记
 
