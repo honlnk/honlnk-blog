@@ -1,0 +1,27 @@
+name: 触发博客重建
+
+# 笔记仓内容变更后，通知 honlnk-blog-site 框架仓重新构建部署博客
+# 实现近实时联动：push 笔记 → 博客 1-2 分钟内自动更新
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 通知 honlnk-blog-site 重建
+        run: |
+          set -e
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.BLOG_SITE_PAT }}" \
+            https://api.github.com/repos/honlnk/honlnk-blog-site/dispatches \
+            -d '{"event_type":"notes-updated"}')
+          echo "Dispatch response: $RESPONSE"
+          if [ "$RESPONSE" != "204" ]; then
+            echo "::warning::触发博客重建失败（HTTP $RESPONSE）。请检查 BLOG_SITE_PAT secret 是否已配置且未过期。"
+            exit 1
+          fi
+          echo "✓ 已通知 honlnk-blog-site 重建博客"
