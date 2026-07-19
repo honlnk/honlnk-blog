@@ -45,11 +45,11 @@ status: completed
   ▼
 honlnk-gateway（全局网关，Nginx 容器）
   │
-  ├─ piclist.honlnk.top → piclist-app:36677（PicList 图床）
+  ├─ piclist.honlnk.com → piclist-app:36677（PicList 图床）
   │
-  ├─ honlnk-obsidian.honlnk.top → 阿里云 OSS 反代（网关终结 HTTPS，回源 OSS）
+  ├─ honlnk-obsidian.honlnk.com → 阿里云 OSS 反代（网关终结 HTTPS，回源 OSS）
   │
-  └─ daidai.honlnk.top / api.daidai.honlnk.top / mqtt.daidai.honlnk.top
+  └─ daidai.honlnk.com / api.daidai.honlnk.com / mqtt.daidai.honlnk.com
      → dai-dai-gateway:443（HTTPS→HTTPS 转发，避免无限重定向）
 ```
 
@@ -84,20 +84,20 @@ dai-dai-gateway 同时加入两个网络，既能跟内部服务通信，又能�
 /home/honlnk/
 ├── piclist/
 │   ├── config.json                ← PicList 配置
-│   └── ssl/                       ← piclist.honlnk.top 证书
+│   └── ssl/                       ← piclist.honlnk.com 证书
 │       ├── fullchain.pem
 │       └── privkey.pem
 ├── oss/
-│   └── ssl/                       ← honlnk-obsidian.honlnk.top 证书
+│   └── ssl/                       ← honlnk-obsidian.honlnk.com 证书
 │       ├── fullchain.pem
 │       └── privkey.pem
 ├── honlnk-gateway/
 │   ├── nginx.conf                 ← 全局网关 Nginx 主配置
 │   ├── conf.d/                    ← 站点配置
 │   │   ├── default.conf
-│   │   ├── piclist.honlnk.top.conf
+│   │   ├── piclist.honlnk.com.conf
 │   │   ├── daidai.proxy.conf
-│   │   └── oss.honlnk.top.conf
+│   │   └── oss.honlnk.com.conf
 │   ├── renew-hook.sh              ← 证书续期脚本
 │   └── renew.log                  ← 续期日志
 ├── dai-dai-compose/               ← dai-dai 部署配置
@@ -193,7 +193,7 @@ mkdir -p /home/honlnk/piclist
       "bucket": "<YOUR_OSS_BUCKET_NAME>",
       "area": "oss-cn-beijing",
       "path": "images/",
-      "customUrl": "https://honlnk-obsidian.honlnk.top"
+      "customUrl": "https://honlnk-obsidian.honlnk.com"
     }
   },
   "settings": {
@@ -211,7 +211,7 @@ mkdir -p /home/honlnk/piclist
     "watermark": {
       "isAddWatermark": true,
       "watermarkType": "text",
-      "watermarkText": "www.honlnk.top",
+      "watermarkText": "www.honlnk.com",
       "watermarkColor": "rgba(128, 128, 128, 0.5)",
       "watermarkScaleRatio": 0.1,
       "watermarkPosition": "southeast",
@@ -243,9 +243,9 @@ docker run -d \
 ├── nginx.conf
 └── conf.d/
     ├── default.conf              # 兜底，返回 404
-    ├── piclist.honlnk.top.conf   # PicList HTTPS
+    ├── piclist.honlnk.com.conf   # PicList HTTPS
     ├── daidai.proxy.conf         # dai-dai 项目 HTTPS 代理
-    └── oss.honlnk.top.conf       # OSS 反代 + HTTPS
+    └── oss.honlnk.com.conf       # OSS 反代 + HTTPS
 ```
 
 `nginx.conf`：
@@ -280,12 +280,12 @@ http {
 }
 ```
 
-`conf.d/piclist.honlnk.top.conf`：
+`conf.d/piclist.honlnk.com.conf`：
 
-```nginx fold title:piclist.honlnk.top.conf
+```nginx fold title:piclist.honlnk.com.conf
 server {
     listen 80;
-    server_name piclist.honlnk.top;
+    server_name piclist.honlnk.com;
     location / {
         return 301 https://$host$request_uri;
     }
@@ -293,7 +293,7 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name piclist.honlnk.top;
+    server_name piclist.honlnk.com;
 
     ssl_certificate /etc/nginx/ssl-piclist/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl-piclist/privkey.pem;
@@ -322,7 +322,7 @@ server {
 # HTTP 跳转 HTTPS
 server {
     listen 80;
-    server_name daidai.honlnk.top api.daidai.honlnk.top mqtt.daidai.honlnk.top;
+    server_name daidai.honlnk.com api.daidai.honlnk.com mqtt.daidai.honlnk.com;
     location / {
         return 301 https://$host$request_uri;
     }
@@ -331,13 +331,13 @@ server {
 # 每个域名独立 server block，使用各自证书
 # 关键：proxy_pass 必须用 HTTPS，否则 dai-dai-gateway 内部会触发 HTTP→HTTPS 跳转，导致无限重定向
 
-# daidai.honlnk.top
+# daidai.honlnk.com
 server {
     listen 443 ssl http2;
-    server_name daidai.honlnk.top;
+    server_name daidai.honlnk.com;
 
-    ssl_certificate /etc/nginx/ssl-daidai/daidai.honlnk.top/daidai.honlnk.top_bundle.pem;
-    ssl_certificate_key /etc/nginx/ssl-daidai/daidai.honlnk.top/daidai.honlnk.top.key;
+    ssl_certificate /etc/nginx/ssl-daidai/daidai.honlnk.com/daidai.honlnk.com_bundle.pem;
+    ssl_certificate_key /etc/nginx/ssl-daidai/daidai.honlnk.com/daidai.honlnk.com.key;
 
     ssl_session_timeout 5m;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -359,16 +359,16 @@ server {
     }
 }
 
-# api.daidai.honlnk.top（同理，证书路径不同）
-# mqtt.daidai.honlnk.top（同理）
+# api.daidai.honlnk.com（同理，证书路径不同）
+# mqtt.daidai.honlnk.com（同理）
 ```
 
-`conf.d/oss.honlnk.top.conf`：
+`conf.d/oss.honlnk.com.conf`：
 
-```nginx fold title:oss.honlnk.top.conf
+```nginx fold title:oss.honlnk.com.conf
 server {
     listen 80;
-    server_name honlnk-obsidian.honlnk.top;
+    server_name honlnk-obsidian.honlnk.com;
     location / {
         return 301 https://$host$request_uri;
     }
@@ -376,7 +376,7 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name honlnk-obsidian.honlnk.top;
+    server_name honlnk-obsidian.honlnk.com;
 
     ssl_certificate /etc/nginx/ssl-oss/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl-oss/privkey.pem;
@@ -388,7 +388,7 @@ server {
 
     location / {
         proxy_pass https://<YOUR_OSS_BUCKET_NAME>.oss-cn-beijing.aliyuncs.com;
-        proxy_set_header Host honlnk-obsidian.honlnk.top;  # 必须用自定义域名，避免 OSS 强制下载
+        proxy_set_header Host honlnk-obsidian.honlnk.com;  # 必须用自定义域名，避免 OSS 强制下载
         proxy_set_header X-Real-IP $remote_addr;
         proxy_hide_header Content-Disposition;
         proxy_ssl_server_name on;
@@ -423,32 +423,32 @@ docker run -d \
 docker stop honlnk-gateway
 
 # 签发所有域名证书
-sudo certbot certonly --standalone -d piclist.honlnk.top
-sudo certbot certonly --standalone -d honlnk-obsidian.honlnk.top
-sudo certbot certonly --standalone -d daidai.honlnk.top
-sudo certbot certonly --standalone -d api.daidai.honlnk.top
-sudo certbot certonly --standalone -d mqtt.daidai.honlnk.top
+sudo certbot certonly --standalone -d piclist.honlnk.com
+sudo certbot certonly --standalone -d honlnk-obsidian.honlnk.com
+sudo certbot certonly --standalone -d daidai.honlnk.com
+sudo certbot certonly --standalone -d api.daidai.honlnk.com
+sudo certbot certonly --standalone -d mqtt.daidai.honlnk.com
 
 # 拷贝证书到各服务目录
 # piclist
 mkdir -p /home/honlnk/piclist/ssl
-sudo cp /etc/letsencrypt/archive/piclist.honlnk.top/fullchain1.pem /home/honlnk/piclist/ssl/fullchain.pem
-sudo cp /etc/letsencrypt/archive/piclist.honlnk.top/privkey1.pem /home/honlnk/piclist/ssl/privkey.pem
+sudo cp /etc/letsencrypt/archive/piclist.honlnk.com/fullchain1.pem /home/honlnk/piclist/ssl/fullchain.pem
+sudo cp /etc/letsencrypt/archive/piclist.honlnk.com/privkey1.pem /home/honlnk/piclist/ssl/privkey.pem
 
 # oss
 mkdir -p /home/honlnk/oss/ssl
-sudo cp /etc/letsencrypt/archive/honlnk-obsidian.honlnk.top/fullchain1.pem /home/honlnk/oss/ssl/fullchain.pem
-sudo cp /etc/letsencrypt/archive/honlnk-obsidian.honlnk.top/privkey1.pem /home/honlnk/oss/ssl/privkey.pem
+sudo cp /etc/letsencrypt/archive/honlnk-obsidian.honlnk.com/fullchain1.pem /home/honlnk/oss/ssl/fullchain.pem
+sudo cp /etc/letsencrypt/archive/honlnk-obsidian.honlnk.com/privkey1.pem /home/honlnk/oss/ssl/privkey.pem
 
 # dai-dai web（覆盖原有腾讯云证书，保持文件名一致）
-sudo cp /etc/letsencrypt/archive/daidai.honlnk.top/fullchain1.pem /home/honlnk/dai-dai-infra/certs/web/daidai.honlnk.top/daidai.honlnk.top_bundle.pem
-sudo cp /etc/letsencrypt/archive/daidai.honlnk.top/privkey1.pem /home/honlnk/dai-dai-infra/certs/web/daidai.honlnk.top/daidai.honlnk.top.key
-sudo cp /etc/letsencrypt/archive/api.daidai.honlnk.top/fullchain1.pem /home/honlnk/dai-dai-infra/certs/web/api.daidai.honlnk.top/api.daidai.honlnk.top_bundle.pem
-sudo cp /etc/letsencrypt/archive/api.daidai.honlnk.top/privkey1.pem /home/honlnk/dai-dai-infra/certs/web/api.daidai.honlnk.top/api.daidai.honlnk.top.key
+sudo cp /etc/letsencrypt/archive/daidai.honlnk.com/fullchain1.pem /home/honlnk/dai-dai-infra/certs/web/daidai.honlnk.com/daidai.honlnk.com_bundle.pem
+sudo cp /etc/letsencrypt/archive/daidai.honlnk.com/privkey1.pem /home/honlnk/dai-dai-infra/certs/web/daidai.honlnk.com/daidai.honlnk.com.key
+sudo cp /etc/letsencrypt/archive/api.daidai.honlnk.com/fullchain1.pem /home/honlnk/dai-dai-infra/certs/web/api.daidai.honlnk.com/api.daidai.honlnk.com_bundle.pem
+sudo cp /etc/letsencrypt/archive/api.daidai.honlnk.com/privkey1.pem /home/honlnk/dai-dai-infra/certs/web/api.daidai.honlnk.com/api.daidai.honlnk.com.key
 
 # mqtt（覆盖原有腾讯云证书，保持文件名一致）
-sudo cp /etc/letsencrypt/archive/mqtt.daidai.honlnk.top/fullchain1.pem /home/honlnk/dai-dai-infra/certs/mqtt/mqtt.daidai.honlnk.top_bundle.pem
-sudo cp /etc/letsencrypt/archive/mqtt.daidai.honlnk.top/privkey1.pem /home/honlnk/dai-dai-infra/certs/mqtt/mqtt.daidai.honlnk.top.key
+sudo cp /etc/letsencrypt/archive/mqtt.daidai.honlnk.com/fullchain1.pem /home/honlnk/dai-dai-infra/certs/mqtt/mqtt.daidai.honlnk.com_bundle.pem
+sudo cp /etc/letsencrypt/archive/mqtt.daidai.honlnk.com/privkey1.pem /home/honlnk/dai-dai-infra/certs/mqtt/mqtt.daidai.honlnk.com.key
 
 # 修改权限
 sudo chown -R honlnk:honlnk /home/honlnk/piclist/ssl /home/honlnk/oss/ssl /home/honlnk/dai-dai-infra/certs/
@@ -457,14 +457,14 @@ docker start honlnk-gateway
 ```
 
 > [!info] DNS 验证说明
-> `honlnk-obsidian.honlnk.top` 最初 DNS 指向阿里云 OSS，standalone 无法验证，临时使用了 manual + DNS 验证。后将 DNS 改到服务器 IP，重新用 standalone 签发。
+> `honlnk-obsidian.honlnk.com` 最初 DNS 指向阿里云 OSS，standalone 无法验证，临时使用了 manual + DNS 验证。后将 DNS 改到服务器 IP，重新用 standalone 签发。
 
 ### 第七步：DNS 配置
 
 | 域名 | 类型 | 值 |
 |---|---|---|
-| piclist.honlnk.top | A | <YOUR_SERVER_IP> |
-| honlnk-obsidian.honlnk.top | A | <YOUR_SERVER_IP> |
+| piclist.honlnk.com | A | <YOUR_SERVER_IP> |
+| honlnk-obsidian.honlnk.com | A | <YOUR_SERVER_IP> |
 
 ### 第八步：更新 dai-dai 项目 compose 配置
 
@@ -499,7 +499,7 @@ scp deploy/compose/docker-compose.prod.yml volcano-honlnk:/home/honlnk/dai-dai-c
 
 ### 1. 无限重定向（ERR_TOO_MANY_REDIRECTS）
 
-**现象**：浏览器访问 `https://daidai.honlnk.top` 报重定向次数过多。
+**现象**：浏览器访问 `https://daidai.honlnk.com` 报重定向次数过多。
 
 **原因**：honlnk-gateway 用 HTTPS 接收请求，但 `proxy_pass http://dai-dai-gateway:80` 用 HTTP 转发。dai-dai-gateway 内部 Nginx 看到 HTTP 请求，触发 301 跳转到 HTTPS，形成循环。
 
@@ -511,7 +511,7 @@ scp deploy/compose/docker-compose.prod.yml volcano-honlnk:/home/honlnk/dai-dai-c
 
 **原因**：Nginx 反代时 `proxy_set_header Host` 设为 OSS 默认域名，触发阿里云安全策略，返回 `x-oss-force-download: true`。
 
-**解决**：`proxy_set_header Host` 改为自定义域名 `honlnk-obsidian.honlnk.top`，因为该域名已在 OSS 控制台绑定，OSS 可以通过自定义域名识别 bucket。
+**解决**：`proxy_set_header Host` 改为自定义域名 `honlnk-obsidian.honlnk.com`，因为该域名已在 OSS 控制台绑定，OSS 可以通过自定义域名识别 bucket。
 
 ### 3. dai-dai 重新部署后 502
 
@@ -544,11 +544,11 @@ scp deploy/compose/docker-compose.prod.yml volcano-honlnk:/home/honlnk/dai-dai-c
 
 | 域名 | 证书存放位置 | 证书文件名 |
 |---|---|---|
-| `piclist.honlnk.top` | `/home/honlnk/piclist/ssl/` | `fullchain.pem` / `privkey.pem` |
-| `honlnk-obsidian.honlnk.top` | `/home/honlnk/oss/ssl/` | `fullchain.pem` / `privkey.pem` |
-| `daidai.honlnk.top` | `/home/honlnk/dai-dai-infra/certs/web/daidai.honlnk.top/` | `daidai.honlnk.top_bundle.pem` / `daidai.honlnk.top.key` |
-| `api.daidai.honlnk.top` | `/home/honlnk/dai-dai-infra/certs/web/api.daidai.honlnk.top/` | `api.daidai.honlnk.top_bundle.pem` / `api.daidai.honlnk.top.key` |
-| `mqtt.daidai.honlnk.top` | `/home/honlnk/dai-dai-infra/certs/mqtt/` | `mqtt.daidai.honlnk.top_bundle.pem` / `mqtt.daidai.honlnk.top.key` |
+| `piclist.honlnk.com` | `/home/honlnk/piclist/ssl/` | `fullchain.pem` / `privkey.pem` |
+| `honlnk-obsidian.honlnk.com` | `/home/honlnk/oss/ssl/` | `fullchain.pem` / `privkey.pem` |
+| `daidai.honlnk.com` | `/home/honlnk/dai-dai-infra/certs/web/daidai.honlnk.com/` | `daidai.honlnk.com_bundle.pem` / `daidai.honlnk.com.key` |
+| `api.daidai.honlnk.com` | `/home/honlnk/dai-dai-infra/certs/web/api.daidai.honlnk.com/` | `api.daidai.honlnk.com_bundle.pem` / `api.daidai.honlnk.com.key` |
+| `mqtt.daidai.honlnk.com` | `/home/honlnk/dai-dai-infra/certs/mqtt/` | `mqtt.daidai.honlnk.com_bundle.pem` / `mqtt.daidai.honlnk.com.key` |
 
 
 
@@ -617,8 +617,8 @@ log "========== 证书续期任务开始 =========="
 
 RENEWED=false
 
-# ===== 第1部分：piclist.honlnk.top → /home/honlnk/piclist/ssl =====
-PICLIST_SRC="/etc/letsencrypt/archive/piclist.honlnk.top"
+# ===== 第1部分：piclist.honlnk.com → /home/honlnk/piclist/ssl =====
+PICLIST_SRC="/etc/letsencrypt/archive/piclist.honlnk.com"
 PICLIST_DST="/home/honlnk/piclist/ssl"
 
 LATEST_FULLCHAIN=$(ls -t "$PICLIST_SRC"/fullchain*.pem 2>/dev/null | head -1)
@@ -627,12 +627,12 @@ LATEST_PRIVKEY=$(ls -t "$PICLIST_SRC"/privkey*.pem 2>/dev/null | head -1)
 if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
     cp -f "$LATEST_FULLCHAIN" "$PICLIST_DST/fullchain.pem"
     cp -f "$LATEST_PRIVKEY" "$PICLIST_DST/privkey.pem"
-    log "已更新 piclist.honlnk.top 证书"
+    log "已更新 piclist.honlnk.com 证书"
     RENEWED=true
 fi
 
-# ===== 第2部分：honlnk-obsidian.honlnk.top → /home/honlnk/oss/ssl =====
-OSS_SRC="/etc/letsencrypt/archive/honlnk-obsidian.honlnk.top"
+# ===== 第2部分：honlnk-obsidian.honlnk.com → /home/honlnk/oss/ssl =====
+OSS_SRC="/etc/letsencrypt/archive/honlnk-obsidian.honlnk.com"
 OSS_DST="/home/honlnk/oss/ssl"
 
 LATEST_FULLCHAIN=$(ls -t "$OSS_SRC"/fullchain*.pem 2>/dev/null | head -1)
@@ -641,31 +641,31 @@ LATEST_PRIVKEY=$(ls -t "$OSS_SRC"/privkey*.pem 2>/dev/null | head -1)
 if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
     cp -f "$LATEST_FULLCHAIN" "$OSS_DST/fullchain.pem"
     cp -f "$LATEST_PRIVKEY" "$OSS_DST/privkey.pem"
-    log "已更新 honlnk-obsidian.honlnk.top 证书"
+    log "已更新 honlnk-obsidian.honlnk.com 证书"
     RENEWED=true
 fi
 
-# ===== 第3部分：mqtt.daidai.honlnk.top → /home/honlnk/dai-dai-infra/certs/mqtt =====
+# ===== 第3部分：mqtt.daidai.honlnk.com → /home/honlnk/dai-dai-infra/certs/mqtt =====
 # mosquitto 不支持证书热重载，续期后必须重启容器
-MQTT_SRC="/etc/letsencrypt/archive/mqtt.daidai.honlnk.top"
+MQTT_SRC="/etc/letsencrypt/archive/mqtt.daidai.honlnk.com"
 MQTT_DST="/home/honlnk/dai-dai-infra/certs/mqtt"
 
 LATEST_FULLCHAIN=$(ls -t "$MQTT_SRC"/fullchain*.pem 2>/dev/null | head -1)
 LATEST_PRIVKEY=$(ls -t "$MQTT_SRC"/privkey*.pem 2>/dev/null | head -1)
 
 if [ -n "$LATEST_FULLCHAIN" ] && [ -n "$LATEST_PRIVKEY" ]; then
-    cp -f "$LATEST_FULLCHAIN" "$MQTT_DST/mqtt.daidai.honlnk.top_bundle.pem"
-    cp -f "$LATEST_PRIVKEY" "$MQTT_DST/mqtt.daidai.honlnk.top.key"
-    log "已更新 mqtt.daidai.honlnk.top 证书"
+    cp -f "$LATEST_FULLCHAIN" "$MQTT_DST/mqtt.daidai.honlnk.com_bundle.pem"
+    cp -f "$LATEST_PRIVKEY" "$MQTT_DST/mqtt.daidai.honlnk.com.key"
+    log "已更新 mqtt.daidai.honlnk.com 证书"
     docker restart dai-dai-mqtt 2>/dev/null   # 必须重启（mosquitto 不支持热重载）
     log "已重启 dai-dai-mqtt 容器"
     RENEWED=true
 fi
 
-# ===== 第4部分：dai-dai web 系列（daidai.honlnk.top、api.daidai.honlnk.top）=====
+# ===== 第4部分：dai-dai web 系列（daidai.honlnk.com、api.daidai.honlnk.com）=====
 # 证书存放在 dai-dai-infra 原有位置，文件名保持与腾讯云时代一致
 # 这样 Nginx 配置和 docker-compose 挂载都不用改
-DAIDAI_DOMAINS=("daidai.honlnk.top" "api.daidai.honlnk.top")
+DAIDAI_DOMAINS=("daidai.honlnk.com" "api.daidai.honlnk.com")
 
 for domain in "${DAIDAI_DOMAINS[@]}"; do
     SRC="/etc/letsencrypt/archive/$domain"
@@ -700,7 +700,7 @@ echo "" >> "$LOG_FILE"
 **核心逻辑**：certbot 每次续期生成递增编号的文件（`fullchain1.pem` → `fullchain2.pem` → ...），脚本通过 `ls -t | head -1` 按修改时间排序取最新文件，拷贝为固定文件名供 Nginx 使用。这样无论续期多少次，Nginx 配置和容器挂载都不需要改动。
 
 > [!note] MQTT 证书的双路径
-> `mqtt.daidai.honlnk.top` 同时承载两条 TLS 路径，**两条路径用的是同一张证书**：
+> `mqtt.daidai.honlnk.com` 同时承载两条 TLS 路径，**两条路径用的是同一张证书**：
 > - **443 端口（MQTT over WebSocket / WSS）**：由 `honlnk-gateway` 终结 TLS，证书挂载在网关上，更新后随网关 `nginx -s reload` 生效
 > - **8883 端口（标准 MQTT over TLS）**：由 `dai-dai-mqtt`（mosquitto）容器直接监听，证书挂载在 mosquitto 上
 >
@@ -723,7 +723,7 @@ cat /home/honlnk/honlnk-gateway/renew.log
 - [x] **OSS 图片 HTTPS 访问（服务器反代 OSS）**
 - [x] **dai-dai 系列证书迁移到 certbot 自动管理**
 - [x] **证书自动续期（crontab + renew-hook.sh）**
-- [x] **mqtt.daidai.honlnk.top 证书迁移到 certbot 自动管理**
+- [x] **mqtt.daidai.honlnk.com 证书迁移到 certbot 自动管理**
 
 ---
 

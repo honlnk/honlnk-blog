@@ -85,75 +85,75 @@
 
 1. 新建一个空白页面，暂时不必取名
 2. 使用斜杠指令：空白行输入`/sjbg` 即可打开快捷菜单，选择“数据表格 - 嵌入” 选项，如下图
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_160413_450ed28ad10bc3e4.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_160413_450ed28ad10bc3e4.png)
 3. 系统自动创建一个“表格视图”的多维表格，嵌入在当前空白页面中
 4. 侧边栏呈现“普通页面下包含一个表格页面的状态”
-    - ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_160751_6934dd33c89a37ac.png)
+    - ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_160751_6934dd33c89a37ac.png)
     - （可选步）鼠标拖动“数据表格”到最外侧，使当前表格成为一个独立的页面，不再嵌入在任何页面中，完成状态如下
-    - ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_161354_fdf49ff04fca507e.png)
+    - ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_161354_fdf49ff04fca507e.png)
 5. 重命名文件，如："反馈收集表"
 
 ### 编辑表格字段
 
 1. 点击“视图配置” -> “字段”，打开字段配置页面
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_164309_f8b2ebfd8260c924.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_164309_f8b2ebfd8260c924.png)
 2. 单击对应的字段，可打开配置菜单进行设置
 3. 单击“新增字段”，可创建新的字段
 4. 字段配置大致如下：
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_165919_5197bab4f9504555.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_165919_5197bab4f9504555.png)
 
 
 ### 配置看板视图
 
 1. 点击“新建视图”按钮 -> 选择“看板”选项 -> 点击“创建视图”
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_175016_c23dd4c564394b5f.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_175016_c23dd4c564394b5f.png)
 2. 单击“分组”按钮 -> 分组条件选择“完成情况”字段
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_175212_23a2ce2df4bb47c6.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_175212_23a2ce2df4bb47c6.png)
 
 ### 配置时间线视图（可选）
 
 1. 点击“新建视图”按钮 -> 选择“时间线”选项 -> 点击“创建视图”
 2. 选择器列表中新增两个字段：开始时间、结束时间，分别对应开始
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_175500_888295230941da55.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_175500_888295230941da55.png)
 3. 勾选"采用起止时间段" -> “开始时间”和“结束时间” 两个选择器中分别选择对应的选项 -> 点击“确定”
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_175657_2a93dad108439fc3.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_175657_2a93dad108439fc3.png)
 4. 配置视图中显示的字段
 	- 默认强制展示问题标题
 	- 隐藏所有出完成情况之外的字段，房子显示内容过多
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_175944_edc668f972c78761.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_175944_edc668f972c78761.png)
 
 ### 配置表单视图
 
 1. 点击“新建视图”按钮 -> 选择“表单”选项 -> 点击“创建视图”
 2. 点击表单左上角“编辑表单”按钮，打开表单编辑页面
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_180228_a4ba1a4433659019.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_180228_a4ba1a4433659019.png)
 3. 鼠标移入表单，会显示当前控件对应的基础操作：设置为必选，以及隐藏
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_180354_5e15bc1e7b8e3bfe.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_180354_5e15bc1e7b8e3bfe.png)
 4. 点击表单，会显示当前控件对应的详细操作
 	- 任务详情表单设置为多行文本格式
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_183305_800884b85ac8d3cd.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_183305_800884b85ac8d3cd.png)
 	- 附件表单设置为允许上传多个文件
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_183339_081a5cf14c90d2d9.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_183339_081a5cf14c90d2d9.png)
 
 
 5. 设置表单提交后的跳转目标
 6. 若有误隐藏的控件，可在左侧列表中回复
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_180703_788c51b2fbbc092a.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_180703_788c51b2fbbc092a.png)
 7. 将表单设为对外分享状态
 	- 注意：千万不要将整个表格文件设为分享状态，会有数据丢失的风险
 	- 开启分享表单的开关
 	- 设置为仅登录用户可填写；若有专业版会员，可设置为任何人可填写（FlowUs没有会员也可设为任何人可填写）
 	- 复制链接，或下载分享海报，即可让用户通过这个表单，在表格中添加反馈了，如[https://www.wolai.com/f/qpoF91LFG3d8EEcnr5MMbF](https://www.wolai.com/f/qpoF91LFG3d8EEcnr5MMbF)
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_180913_0932d44782804218.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_180913_0932d44782804218.png)
 
 ### 个性化配置
 
 1. 可根据个人喜好，对不同的视图设置不同的名字、顺序
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_181401_53027f147a297328.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_181401_53027f147a297328.png)
 2. 确认表格格式无误后，开启锁定数据表格功能
 	- 防止管理员在管理数据时，对表格配置误操作
 	- 点击右上角"更多"按钮 -> 开启"锁定数据表格"开关
-	- ![image.png](https://honlnk-obsidian.honlnk.top/images/20251224_181526_b58f563a3c8775b1.png)
+	- ![image.png](https://honlnk-obsidian.honlnk.com/images/20251224_181526_b58f563a3c8775b1.png)
 
 ---
 

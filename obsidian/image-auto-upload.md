@@ -17,8 +17,8 @@
 - ✅ 完美兼容 macOS 和 Obsidian 插件
 
 最终成果：  
-✅ 上传地址：`https://piclist.honlnk.top/upload?key=YOUR_KEY`  
-✅ 返回 URL：`https://honlnk-obsidian.honlnk.top/images/xxx.jpg`  
+✅ 上传地址：`https://piclist.honlnk.com/upload?key=YOUR_KEY`  
+✅ 返回 URL：`https://honlnk-obsidian.honlnk.com/images/xxx.jpg`  
 ✅ Obsidian 中一键插入 Markdown 图片！
 
 ---
@@ -32,7 +32,7 @@
 |**阿里云 OSS**|对象存储，高可靠、低延迟|
 |**Nginx**|反向代理 + HTTPS + 兼容性兜底|
 |**Let’s Encrypt**|免费 SSL 证书|
-|**自定义域名**|`piclist.honlnk.top`（API 入口） + `honlnk-obsidian.honlnk.top`（OSS CDN 域名）|
+|**自定义域名**|`piclist.honlnk.com`（API 入口） + `honlnk-obsidian.honlnk.com`（OSS CDN 域名）|
 
 ---
 
@@ -45,7 +45,7 @@
 3. 在 RAM 控制台创建子用户，授予 `AliyunOSSFullAccess` 权限
 4. 获取 `AccessKey ID` 和 `AccessKey Secret`
 
-> 💡 建议开启 CDN 加速，并将自定义域名（如 `honlnk-obsidian.honlnk.top`）解析到 OSS 外网 Endpoint。
+> 💡 建议开启 CDN 加速，并将自定义域名（如 `honlnk-obsidian.honlnk.com`）解析到 OSS 外网 Endpoint。
 
 ---
 
@@ -68,7 +68,7 @@ cd ~/piclist-config
       "bucket": "honlnk-obsidian",
       "area": "oss-cn-beijing",
       "path": "images/",
-      "customUrl": "https://honlnk-obsidian.honlnk.top"
+      "customUrl": "https://honlnk-obsidian.honlnk.com"
     }
   },
   "settings": {
@@ -86,7 +86,7 @@ cd ~/piclist-config
     "watermark": {
       "isAddWatermark": true,
       "watermarkType": "text",
-      "watermarkText": "www.honlnk.top",
+      "watermarkText": "www.honlnk.com",
       "watermarkColor": "rgba(128, 128, 128, 0.5)",
       "watermarkScaleRatio": 0.1,
       "watermarkPosition": "southeast",
@@ -150,7 +150,7 @@ curl: (56) Recv failure: Connection reset by peer
 # upload.py
 import requests
 resp = requests.post(
-    "https://piclist.honlnk.top/upload",
+    "https://piclist.honlnk.com/upload",
     params={"key": "ZhiDaoXunChang-Honlnk"},
     files={"file": open("Avatar-AI.jpg", "rb")}
 )
@@ -160,7 +160,7 @@ print(resp.text)
 🎉 输出：
 
 ```json
-{"success":true,"result":["https://honlnk-obsidian.honlnk.top/images/251112_152317_%7Bmd5-6%7D.%7Bext%7D.png"]}
+{"success":true,"result":["https://honlnk-obsidian.honlnk.com/images/251112_152317_%7Bmd5-6%7D.%7Bext%7D.png"]}
 ```
 
 **完美成功！**
@@ -171,7 +171,7 @@ print(resp.text)
 
 1. 安装插件：**Image auto upload**（社区插件市场搜索即可）
 2. 配置上传接口：
-    - API 地址：`https://piclist.honlnk.top/upload`
+    - API 地址：`https://piclist.honlnk.com/upload`
     - 参数：`key=ZhiDaoXunChang-Honlnk`
 3. 拖拽图片 → 自动上传 → 插入 `![](https://...)`
 
@@ -182,7 +182,7 @@ print(resp.text)
 | 项目         | 建议                                  |
 | ---------- | ----------------------------------- |
 | **密钥管理**   | 定期更换 `apiKeys`，避免泄露                 |
-| **域名解析**   | 将 `piclist.honlnk.top` A 记录指向服务器 IP |
+| **域名解析**   | 将 `piclist.honlnk.com` A 记录指向服务器 IP |
 | **OSS 权限** | 子用户仅授权必要权限，禁用主账号 AK                 |
 | **自动续期**   | `certbot renew --quiet` 加入 crontab  |
 | **日志监控**   | `tail -f /var/log/nginx/access.log` |

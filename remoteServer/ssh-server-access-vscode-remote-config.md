@@ -89,14 +89,14 @@
    - Remote - SSH: Editing Configuration Files（编辑配置文件插件）
    - **Remote Explorer**（可视化管理连接）  
 
-![远程资源管理器Logo.png](https://honlnk-obsidian.honlnk.top/images/20251113_215745_b2cd5a7a47f6135d.png)
+![远程资源管理器Logo.png](https://honlnk-obsidian.honlnk.com/images/20251113_215745_b2cd5a7a47f6135d.png)
   
 
 ### 2. 连接远程服务器
 1. 点击左侧边栏 **Remote Explorer/远程资源管理器**，选择配置的别名（如 `myserver`）。  
 2. 点击 **Connect**，选择 **New Window/在当前窗口中连接** 或 **Current Window/在新窗口中连接**。  
 
-![连接远程仓库按钮.png](https://honlnk-obsidian.honlnk.top/images/20251113_220229_4e58d56ff9cc50ea.png)
+![连接远程仓库按钮.png](https://honlnk-obsidian.honlnk.com/images/20251113_220229_4e58d56ff9cc50ea.png)
   
 
 3. **首次连接提示**：  
@@ -107,11 +107,11 @@
 1. **打开远程目录**：  
    - 按 `Ctrl/Command+O` 或点击资源管理器中的 **Open Folder/打开文件夹**，选择服务器上的路径。  
 
-![文件选择器可视化页面.png](https://honlnk-obsidian.honlnk.top/images/20251113_220245_13b3b35edcc8a375.png)
+![文件选择器可视化页面.png](https://honlnk-obsidian.honlnk.com/images/20251113_220245_13b3b35edcc8a375.png)
   
 2. **打开文件后VSCode会在本地留下一个历史记录**
 
-![远程资源管理器文件打开记录.png](https://honlnk-obsidian.honlnk.top/images/20251113_220300_6b406f790ec8d139.png)
+![远程资源管理器文件打开记录.png](https://honlnk-obsidian.honlnk.com/images/20251113_220300_6b406f790ec8d139.png)
 
 
 3. **编辑文件**：  

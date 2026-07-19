@@ -17,7 +17,7 @@ status: completed
 > [!info] 故障信息
 > - **时间**：2026-07-09
 > - **服务器**：volcano-honlnk
-> - **现象**：`https://honlnk-obsidian.honlnk.top/avatar_ai.png` 返回 502
+> - **现象**：`https://honlnk-obsidian.honlnk.com/avatar_ai.png` 返回 502
 > - **根因**：mihomo TUN 模式关闭后，`table inet mihomo` nftables 表残留，劫持了自定义 Docker 网络的出站流量
 > - **耗时**：一次完整的"现象 → 误判 → 修正 → 真凶"排查链路
 
@@ -40,9 +40,9 @@ sudo nft delete table inet mihomo
 
 ## 故障现象
 
-`honlnk-obsidian.honlnk.top` 这个域名（nginx 反代阿里云 OSS）的所有资源访问返回 **502 Bad Gateway**。
+`honlnk-obsidian.honlnk.com` 这个域名（nginx 反代阿里云 OSS）的所有资源访问返回 **502 Bad Gateway**。
 
-而同一台服务器上的其他域名（`daidai.honlnk.top`、`piclist.honlnk.top`）**完全正常**。
+而同一台服务器上的其他域名（`daidai.honlnk.com`、`piclist.honlnk.com`）**完全正常**。
 
 ## 根本原因
 
@@ -106,9 +106,9 @@ nftables PREROUTING (mihomo 表, priority dstnat+1, 比 Docker 靠前)
 
 > [!warning] 为什么 daidai / piclist 正常，只有 honlnk-obsidian 挂了
 > 这是最关键的误导点。看 nginx 配置的 `proxy_pass` 目标：
-> - `daidai.honlnk.top` → `https://dai-dai-gateway:443`（**容器名，Docker 内部通信，不出公网**）→ 正常
-> - `piclist.honlnk.top` → `http://piclist-app:36677`（**容器名，内部通信**）→ 正常
-> - `honlnk-obsidian.honlnk.top` → `https://xxx.oss-cn-beijing.aliyuncs.com`（**外部公网 OSS**）→ 必须出公网 → 被劫持 → 502
+> - `daidai.honlnk.com` → `https://dai-dai-gateway:443`（**容器名，Docker 内部通信，不出公网**）→ 正常
+> - `piclist.honlnk.com` → `http://piclist-app:36677`（**容器名，内部通信**）→ 正常
+> - `honlnk-obsidian.honlnk.com` → `https://xxx.oss-cn-beijing.aliyuncs.com`（**外部公网 OSS**）→ 必须出公网 → 被劫持 → 502
 >
 > **只有 honlnk-obsidian 需要容器主动发起出公网连接**，所以只有它暴露了问题。
 
@@ -209,7 +209,7 @@ sudo nft delete table inet mihomo
 sudo nft list table inet mihomo
 ```
 
-删除后 `honlnk-obsidian.honlnk.top` 立即恢复 200 OK。
+删除后 `honlnk-obsidian.honlnk.com` 立即恢复 200 OK。
 
 ### 第二步：升级 mihomo（顺带改进）
 
@@ -255,7 +255,7 @@ curl -s --noproxy "*" -H "Authorization: Bearer honlnk" "http://127.0.0.1:2001/v
 
 ## 如何判断是否复发
 
-如果日后 `honlnk-obsidian.honlnk.top`（或任何需要容器出公网的服务）又 502，先查这个：
+如果日后 `honlnk-obsidian.honlnk.com`（或任何需要容器出公网的服务）又 502，先查这个：
 
 ```bash fold title:快速诊断
 # 检查 mihomo nft 表是否存在

@@ -33,7 +33,7 @@ aliases:
 
 注册成功登录网站后可以看到如下页面：
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260424_205751_4e1b8440e48dba71.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260424_205751_4e1b8440e48dba71.png)
 
 
 > [!tip] 关于免费套餐
@@ -47,9 +47,9 @@ aliases:
 4. 直接扫码付款即可完成购买
 
 购买后在首页就可以看到会员剩余时长以及剩余天数：
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260424_205810_ceff2f088deeb1fd.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260424_205810_ceff2f088deeb1fd.png)
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260424_205825_c39866cdaba2470c.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260424_205825_c39866cdaba2470c.png)
 
 
 ---
@@ -59,7 +59,7 @@ aliases:
 ### 通过平台教程安装（推荐）
 
 首页下滑可以看到 **"点我前往教程"** 按钮：
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260424_205836_0c854cdd8b876cbb.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260424_205836_0c854cdd8b876cbb.png)
 
 
 > [!warning] 网站提供的使用教程
@@ -68,13 +68,13 @@ aliases:
 >- IOS操作系统（Apple）系统的安装方式必须严格按照教程中的提示去做，必须使用系统自带的Safari浏览器
 >
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260427_094548_e2c422bb7a0adbc9.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260427_094548_e2c422bb7a0adbc9.png)
 
 
 打开平台内的安装教程，以 Android 为例：
 1. 点击 **Android** （绿色）按钮，跳转到教程页面：
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260424_205854_86daadb3ba177c79.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260424_205854_86daadb3ba177c79.png)
 2. 按照页面教程，下载 **Clash for Android** 软件安装包
 3. 下载完成后点击 **一键导入** 即可
 
@@ -133,7 +133,7 @@ aliases:
 
 打开 Clash Verge 后，可以看到这样的首页：
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260427_164344_05097c2c4584b080.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260427_164344_05097c2c4584b080.png)
 
 **第一步：复制订阅链接**
 
@@ -145,7 +145,7 @@ aliases:
 
 回到 Clash Verge，点击首页的 **”导入”** 按钮，或者点击侧边栏的 **”订阅”** 按钮，进入订阅页面，粘贴刚才复制的链接并确认导入：
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260427_164542_771dce49e0b6ae89.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260427_164542_771dce49e0b6ae89.png)
 
 #### 代理模式选择
 
@@ -158,7 +158,7 @@ aliases:
 > - **Mac 用户**：开启虚拟网卡（TUN）模式前，需要先安装依赖。点击页面上 **扳手图标** 即可自动安装
 > - **关机前记得关闭系统代理**，或者直接退出 Clash Verge。否则开机后可能会出现无法上网的情况。遇到此问题时，在系统代理开关处执行 **开启 → 关闭 → 再开启** 即可恢复
 
-![image.png](https://honlnk-obsidian.honlnk.top/images/20260427_170320_ec79058065880e46.png)
+![image.png](https://honlnk-obsidian.honlnk.com/images/20260427_170320_ec79058065880e46.png)
 
 
 ### HarmonyOS（鸿蒙/华为）安装方式
