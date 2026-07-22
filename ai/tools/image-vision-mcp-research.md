@@ -134,7 +134,7 @@ graph TD
 > [!info] 以下结论基于阅读 `@z_ai/mcp-server@0.1.4` 源码（Apache-2.0 开源包，通过 `npm pack` 获取）核实。
 
 - **按场景拆 8 个工具**：`ui_to_artifact` / `extract_text_from_screenshot` / `diagnose_error_screenshot` / `understand_technical_diagram` / `analyze_data_visualization` / `ui_diff_check` / `analyze_image` / `analyze_video` ✅ 已核实（`index.js` 注册 8 个工具）
-- **每个工具内置一套精心调优的 system prompt**（通过阅读源码确认：8 个 prompt 模板采用 `<task><approach><output_structure>` 三段标签结构组织，角色设定写在 prompt 开头散文而非独立标签；强制结构化输出）
+- **每个工具内置一套精心调优的 system prompt**（通过阅读源码确认：8 个 prompt 文件均采用 `<task><approach><output_structure>` 三段标签结构，角色设定以 "You are a..." 开头散文形式写在标签外；强制结构化输出。其中 `ui_to_artifact` 较特殊，内含 `code`/`prompt`/`spec`/`description` 四个变体 prompt，实际模板总数 >8）
 - **默认模型 GLM-4.6V，可配置但仅面向智谱生态**（`environment.js`：`Z_AI_VISION_MODEL` 环境变量可覆盖默认值 `glm-4.6v`，`Z_AI_BASE_URL` 也可自定义；但 `PLATFORM_MODE` 预设只支持 ZAI / ZHIPU 两个平台的 URL，非「写死」）
 - **stdio 本地部署** ✅ 已核实（`StdioServerTransport`）
 
@@ -706,10 +706,10 @@ X-Title: 4.5V MCP Local
 
 ### A.6 System Prompt 的设计哲学
 
-智谱的 system prompt 是整个产品**最值得学习的部分**。每个 prompt 都按严格结构组织：
+智谱的 system prompt 是整个产品**最值得学习的部分**。8 个 prompt 文件结构一致，角色设定以 "You are a..." 散文开头，后接三段标签：
 
 ```text
-<角色设定>      "You are a senior frontend engineer..."
+"You are a senior frontend engineer..."   ← 角色设定（散文，无标签包裹）
 <task>          明确任务
 <approach>      逐步思考方法（"先观察整体→再分析细节→..."）
 <output_structure>  强制输出结构（"1. Generated Code 2. Structure Explanation..."）
