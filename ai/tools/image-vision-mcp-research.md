@@ -55,16 +55,9 @@ type: 技术调研
 基座模型：综合文字 + 图片信息回答用户
 ```
 
-> [!warning] 反模式：在 MCP 内置提示词中引导基座模型配合 linkseek
-> 早期讨论曾考虑这个做法，**已判定为反模式**：
-> - 提示词硬编码耦合另一个产品，违反单一职责
-> - 不同用户可能没有 linkseek，提示词会误导
->
-> 正确做法见下方「三层模型」——编排知识应放在独立的 Skills 层，而非塞进 MCP 工具内部。
-
 #### 三层模型：honlnk 生态的职责分层
 
-协作知识放哪里，曾经是讨论的焦点。早期设想「在 README 里说明，让用户在 AGENTS.md / CLAUDE.md 中自行编写协作规则」——这是最低成本方案，但有两个断点：README 是被动阅读（用户可能没读到），AGENTS.md 是用户手写（每个用户都要重写一遍）。最终确定引入 **Anthropic Agent Skills** 作为中间层，补上缺失的编排能力。
+跨工具协作的编排知识，不在 MCP 内部硬编码（会违反单一职责，且并非所有用户都同时拥有两个工具），而是由独立的 **Anthropic Agent Skills** 层承载。Agent Skills 采用 **progressive disclosure（渐进披露）** 机制——未被触发的 skill 只占 name + description 的几十个 token，不拖累上下文；Agent 根据 task 自动判断是否加载。
 
 ```mermaid
 graph TD
@@ -95,12 +88,7 @@ graph TD
 | **Skills** | Agent 运行时 | **自动加载**（靠 description 触发） | 跨工具编排、何时组合、workflow 范式 |
 | **AGENTS.md** | 用户自己的项目 | Agent 每次启动读 | 用户私有定制、项目级规则 |
 
-> [!tip] 为什么 Skills 是正确的层
-> Anthropic Agent Skills 采用 **progressive disclosure（渐进披露）**——未被触发的 skill 只占 name + description 的几十个 token，不拖累上下文。Agent 根据 task **自动判断是否加载**，不需要用户在每次对话里手动提醒，也不需要把协作规则抄进 AGENTS.md。
->
-> 这干净地解了耦合问题：两个 MCP 本身**零耦合**，各自独立安装、独立工作；Skills 是独立的第三层，只承载「当同时拥有这两个工具时如何组合」的编排知识。没有 linkseek 的用户本 MCP 照样能用。
-
-详见独立计划文档：[[honlnk-skills-plan|honlnk-skills 计划]]（skills 的详细设计在**本 MCP 落地后**才启动）。
+两个 MCP 本身**零耦合**，各自独立安装、独立工作；Skills 是独立的第三层，只承载「当同时拥有这两个工具时如何组合」的编排知识。详见 [[honlnk-skills-plan|honlnk-skills 计划]]（skills 的详细设计在**本 MCP 落地后**才启动）。
 
 ### 1.3 为什么是本地 MCP 而非云端
 
@@ -116,12 +104,10 @@ graph TD
 | 多端共享  | ✅ 天然支持                             | ❌ 每台设备独立配置                          |
 | 网络依赖  | 全程服务端网络                            | MCP 通信走 stdio 不联网，但需联网调用第三方视觉模型 API |
 
-**核心论据**：视觉模型 API 调用本质就是 LLM gateway 的活，不需要任何开源依赖。带宽压力、内存压力的对比都是「普通云服务器 vs 家用 PC」的前提——云端部署除了徒增这双重压力（对小服务器尤其不友好），没有任何收益。本地 stdio 反而是这类工具的主流形态（市面上几乎所有图片 MCP 都这么做）。
+**核心论据**：视觉模型 API 调用本质就是 LLM gateway 的活，不需要任何开源依赖。云端部署除了徒增带宽和内存压力（对小服务器尤其不友好），没有任何收益。本地 stdio 反而是这类工具的主流形态（市面上几乎所有图片 MCP 都这么做）。
 
-> [!note] 带宽与内存压力的归因澄清
-> - **带宽压力**与「传输的数据量（文件大小）」无关。真正的压力来源是 **AI 交互通常走长连接、单次任务耗时较长，会长时间占用服务器出站带宽**。本地 stdio 进程间通信不走网络，对服务器带宽零压力。
-> - **内存压力**的前提是「用户买得起的云服务器（如 2c2g）vs 家用 PC」的资源量级差异。同样多个组件常驻，在云服务器上是实打实的负担，在现在的家用 PC 上基本无感。不要脱离这个对比基准谈内存。
-> - **网络依赖**：本地 MCP 自身的通信（Agent ↔ MCP）走 stdio，不联网。但识图能力依赖第三方视觉模型，调用模型 API 时需要联网——这部分流量走用户自己的网络，不经过任何 MCP 服务器。
+> [!note] 网络依赖说明
+> 本地 MCP 自身的通信（Agent ↔ MCP）走 stdio，不联网。但识图能力依赖第三方视觉模型，调用模型 API 时需要联网——这部分流量走用户自己的网络，不经过任何 MCP 服务器。
 
 ---
 
@@ -131,26 +117,24 @@ graph TD
 
 ### 2.1 智谱方案的核心特征
 
-> [!info] 以下结论基于阅读 `@z_ai/mcp-server@0.1.4` 源码（Apache-2.0 开源包，通过 `npm pack` 获取）核实。
-
-- **按场景拆 8 个工具**：`ui_to_artifact` / `extract_text_from_screenshot` / `diagnose_error_screenshot` / `understand_technical_diagram` / `analyze_data_visualization` / `ui_diff_check` / `analyze_image` / `analyze_video` ✅ 已核实（`index.js` 注册 8 个工具）
-- **每个工具内置一套精心调优的 system prompt**（通过阅读源码确认：8 个 prompt 文件均采用 `<task><approach><output_structure>` 三段标签结构，角色设定以 "You are a..." 开头散文形式写在标签外；强制结构化输出。其中 `ui_to_artifact` 较特殊，内含 `code`/`prompt`/`spec`/`description` 四个变体 prompt，实际模板总数 >8）
-- **默认模型 GLM-4.6V，可配置但仅面向智谱生态**（`environment.js`：`Z_AI_VISION_MODEL` 环境变量可覆盖默认值 `glm-4.6v`，`Z_AI_BASE_URL` 也可自定义；但 `PLATFORM_MODE` 预设只支持 ZAI / ZHIPU 两个平台的 URL，非「写死」）
-- **stdio 本地部署** ✅ 已核实（`StdioServerTransport`）
+- **按场景拆 8 个工具**：`ui_to_artifact` / `extract_text_from_screenshot` / `diagnose_error_screenshot` / `understand_technical_diagram` / `analyze_data_visualization` / `ui_diff_check` / `analyze_image` / `analyze_video`
+- **每个工具内置一套精心调优的 system prompt**：8 个 prompt 文件均采用 `<task><approach><output_structure>` 三段标签结构，角色设定以 "You are a..." 开头散文形式写在标签外；强制结构化输出。其中 `ui_to_artifact` 内含 `code`/`prompt`/`spec`/`description` 四个变体，实际模板总数 >8
+- **默认模型 GLM-4.6V，可配置但仅面向智谱生态**：`Z_AI_VISION_MODEL` 环境变量可覆盖默认值，`Z_AI_BASE_URL` 也可自定义，但 `PLATFORM_MODE` 预设只支持 ZAI / ZHIPU 两个平台
+- **stdio 本地部署**
 
 ### 2.2 本 MCP 的反方向选择
 
-| 维度 | 智谱方案 | 本 MCP |
-|------|---------|--------|
-| 工具拆分 | 按场景拆 8 个 | **不按场景拆**（见 §4 分析） |
-| Prompt 来源 | 内置精心调优的 prompt | **由基座模型实时生成** |
-| 模型 | 默认 GLM-4.6V（可配但仅限智谱生态） | **任意 provider 自配**（首推 GPT-4V 等世界最强多模态） |
-| 部署 | stdio | stdio |
-| 多轮迭代 | 不支持 | **支持**（核心差异化） |
+| 维度        | 智谱方案                   | 本 MCP                                  |
+| --------- | ---------------------- | -------------------------------------- |
+| 工具拆分      | 按场景拆 8 个               | **不按场景拆**（见 §4 分析）                     |
+| Prompt 来源 | 内置精心调优的 prompt         | **由基座模型实时生成**                          |
+| 模型        | 默认 GLM-4.6V（可配但仅限智谱生态） | **任意 provider 自配**（首推 GPT5.6 等世界最强多模态） |
+| 部署        | stdio                  | stdio                                  |
+| 多轮迭代      | 不支持                    | **支持**（核心差异化）                          |
 
 ### 2.3 不按场景拆工具的论据
 
-智谱的"按场景拆工具"本质上是一种**"不信任基座模型"的旧思路**——把 prompt 工程硬编码进 tool。但现代基座模型（GPT-4 / Claude / GLM-5.2 等）**自己生成 prompt 的能力已经非常优秀**，即便任务中临时生成的 prompt，效果都不输精心调优的固定 prompt。
+智谱的"按场景拆工具"本质上是一种 **"不信任基座模型"的旧思路** ——把 prompt 工程硬编码进 tool。但现代基座模型（GPT / Claude / GLM-5.2 等）**自己生成 prompt 的能力已经非常优秀**，即便任务中临时生成的 prompt，效果都不输精心调优的固定 prompt。
 
 按场景拆工具的代价：
 - 工具数量爆炸，模型选择成本上升
@@ -161,9 +145,6 @@ graph TD
 - 极简的 API 表面
 - 基座模型根据用户意图自主决定 prompt
 - 场景扩展零成本
-
-> [!tip] 关键洞察
-> 一个工具 + 一个 `prompt` 参数，让基座模型自己写提示词，**比预设 8 个固定 prompt 的工具集更灵活、更现代**。这是本 MCP 与智谱方案最根本的理念差异。
 
 ---
 
