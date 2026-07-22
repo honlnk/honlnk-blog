@@ -220,11 +220,14 @@ graph TD
 
 ### 4.2 单工具参数 schema 草案
 
+> [!info] 关于 `image_source` / `image_sources` 的数据类型
+> 详见 [[#5.3.5 调研结论：image_source 需要支持的输入形态]]。核心结论：不同 Agent 传递图片的形态不同（ZCode 传 http URL，Claude Code / OpenCode / Codex 传本地文件路径），MCP 作为被调用方无法控制上游，因此设计为 **string 类型，自动识别**（URL / 文件路径 / base64 三种形态兼容）。
+
 #### `analyze_image`
 
 ```typescript
 {
-  image_source: string,        // 本地路径 or 远程 URL（自动识别）
+  image_source: string,        // http URL / 本地文件路径 / base64（自动识别）
   prompt: string,              // 基座模型根据用户意图实时生成
   context?: {                  // 多轮迭代的核心
     previous_descriptions?: string[],  // 之前 MCP 返回的描述
@@ -239,7 +242,7 @@ graph TD
 
 ```typescript
 {
-  image_sources: string[],     // 多张图（对比/批量）
+  image_sources: string[],     // 多张图，每项同 image_source（URL / 本地路径 / base64，自动识别）
   prompt: string,
   context?: { ... }            // 同上
 }
@@ -332,113 +335,93 @@ src/
 ### 5.3 Agent 图片输入机制调研（关键）
 
 > [!warning] 这是设计 `image_source` 参数的前置条件
-> 不同 Agent 在用户粘贴图片时的内部处理机制差异巨大，直接决定了本 MCP 能接到什么形态的图片数据。
+> 用户在 Agent 输入框粘贴/选择图片后，图片最终以什么形态到达 MCP 工具，直接决定了 `image_source` 参数要接收什么类型的数据。
 
-#### 5.3.1 核心结论
+#### 5.3.1 ZCode 的图片保底机制（实测确认）
 
-1. **"粘贴图片 → Agent 自动调 MCP"这个链路，单模态模型下需要客户端配合**，不是 MCP 单独能解决的事
-2. **图片在 Agent 内部的真实流转路径**：粘贴 → 客户端拦截 → 落盘成临时文件 → 在对话里插入 `[Image saved to: <path>]` 文本 → 基座模型读到这个文本 → 调 MCP 传路径
-3. **本 MCP 应该只认 `image_source`（路径/URL），不操心粘贴那一步**——那是客户端/插件层的活
-
-#### 5.3.2 主流 Agent 图片输入机制对比
-
-| Agent | 多模态模型行为 | 单模态模型行为 | MCP 拿到什么 |
-|-------|--------------|--------------|------------|
-| **Claude Code** | 粘贴 → 走模型 vision（绕过 MCP） | 不支持 | **本地文件路径**（官方明确推荐：把图存本地再引用路径） |
-| **Codex CLI** | `--image` flag / Ctrl+V / 拖拽 | 同上 | **本地文件路径**（v0.115+ 全分辨率，v0.117+ `view_image` 工具） |
-| **OpenCode** | 粘贴 → base64 进消息体 | 需要插件配合 | **本地文件路径**（插件把 base64 落盘后注入文本） |
-| **ZCode** | 基于多智能体框架集成 CC/Codex/Gemini | 取决于底层 CLI | **继承底层 CLI 的行为**（路径） |
-
-#### 5.3.3 智谱官方的关键确认
-
-> "除了 Claude Code 之外，**直接在客户端粘贴图片无法调用 MCP Server**，客户端默认会将图片转码后直接调用模型接口。最佳实践是将图片放到本地目录，通过对话的方式指定图片名称或路径来调用 MCP Server。"
-> —— 智谱官方文档原话
-
-**翻译**：粘贴这个动作，客户端默认是把图直接喂给模型 API，**MCP 完全不会被触发**。要让 MCP 接到图，必须用户**主动把图存本地，然后用文字说"识别 ./xxx.png"**。
-
-#### 5.3.4 OpenCode 生态的多模态插件（重要参考）
-
-OpenCode 生态已经出现了 **3 个专门解决"单模态模型粘贴图片"问题**的插件，这些是本 MCP 必须知道的竞品/协作对象：
-
-**① `opencode-vision`（最轻量，参考价值最高）**
-
-核心机制：拦截粘贴 → 落盘 → 注入提示词让模型调 MCP
+ZCode 在检测到当前使用的模型**不是多模态模型**时，会主动执行一套兜底流程：
 
 ```text
-用户粘贴图片
+用户粘贴图片到输入框
   ↓
-插件拦截，存到 /tmp/xxx.png
+ZCode 在后台静默上传图片到智谱 UCloud 对象存储（图床）
   ↓
-在消息里注入："Image saved to /tmp/xxx.png"
+生成带签名的预签名 URL（presigned URL，有 Expires 时效）
   ↓
-基座模型读到这个文本，自然决定调用 MCP 的 image_analyze 工具
+基座模型收到的是 URL（单模态模型自己看不到图片）
+  ↓
+ZCode 自动扩写 prompt（将用户的简短提问扩写为更详细的分析指令）
+  ↓
+调用内置 MCP 工具（analyze_image），把 URL 作为 imageSource 传过去
+  ↓
+MCP 工具用这个 URL 调 GLM-4.6V 识别，返回文字描述
 ```
 
-关键设计点：
-- **可配置任何 MCP 工具**：`"imageAnalysisTool": "mcp_xxx_analyze_image"`——意味着本 MCP 只要工具名规范，就能被这类插件无缝接入
-- **可配置模型匹配**：`"models": ["*/minimax-m2.5"]`，按 provider/model 通配
-- **可配置 prompt 模板**：`{imageList} {imageCount} {toolName} {userText}` 占位符
+以上流程均由 ZCode 客户端自身完成，与本 MCP 无关。但这个流程揭示了一个**至关重要的结论**：
 
-> [!tip] 对本 MCP 的启示
-> 本 MCP 的工具命名要规范（如 `analyze_image`），这样 `opencode-vision` 这类插件可以直接配置 `imageAnalysisTool: "mcp_xxx_analyze_image"` 无缝接入。
+> [!important] 调研最终结论
+> 在 ZCode + 单模态模型（如 GLM-5.2）的场景下，用户粘贴的图片最终被处理为 **http URL** 到达 MCP 工具。不是本地文件路径，也不是 base64。
 
-**② `opencode-multimodal`（最完整，工业级）**
+#### 5.3.2 多模态模型 vs 单模态模型的行为差异（实测对比）
 
-思路完全不同——**不走 MCP，走 plugin hook 直接改消息**：
+同一台 ZCode 客户端，同样的粘贴操作，图片的命运取决于基座模型是否多模态：
 
-```text
-粘贴的图片
-  ↓
-experimental.chat.messages.transform hook 拦截
-  ↓
-路由到配置好的 fallback 模型（如 GPT-4o）
-  ↓
-fallback 模型返回结构化 <description>
-  ↓
-把图片替换成 description 文本，主模型继续干活
-```
+| | 多模态模型（如 GPT） | 单模态模型（如 GLM-5.2） |
+|---|---|---|
+| 用户操作 | 粘贴图片 + 提问 | 同样操作 |
+| 图片发送形态 | File attachment（内联） | 上传图床 → URL |
+| 是否调用 MCP | ❌ 不调用，模型直接消费 | ✅ 调用 analyze_image |
+| prompt 改写 | 无 | 扩写为更详细的分析指令 |
 
-亮点：
-- 支持**图片/PDF/音频/视频** 4 种模态
-- **缓存机制**：相同图片+相同 prompt 命中缓存跳过 fallback 调用
-- **并发分组**：同一 fallback 模型的多张图打包一次调用
-- **模态分离**：图片走 GPT-4o，PDF 走 Claude，可分开配置
+**多模态模型**：图片直接编码进 API 请求的 messages 数组（base64 inline），模型原生就能看到图片，**完全不走 MCP**。
 
-**③ `observer` 插件 + 子 agent（中国开发者方案，最贴近本 MCP 诉求）**
+**单模态模型**：ZCode 触发保底机制，把图片转成 URL，路由到 MCP 工具。
 
-这位作者用 DeepSeek-V4（纯文本）+ Kimi K2.6（多模态子 agent）组合，**和作者"GLM-5.2 + 多模态 MCP"的诉求几乎一模一样**。
+#### 5.3.3 其他 Agent 的情况
 
-核心创新：**5 个场景模式 + 优先级**：
+| Agent | 保底机制 | MCP 接收的图片形态 | 说明 |
+|-------|---------|----------------|------|
+| **ZCode** | ✅ 有（内置） | **http URL**（图床预签名） | 单模态模型时：上传图床 → URL → 内置 MCP |
+| **Claude Code** | ❌ 无 | **本地文件路径** | 单模态模型粘贴图片直接报错。GLM 是唯一例外——智谱提供了配套视觉 MCP，Claude Code 会主动调用，传文件路径 |
+| **Codex CLI** | ❌ 无 | **本地文件路径** | 原生面向多模态 GPT 模型设计，不支持单模态模型场景。图片通过 `--image` flag 或粘贴附加，模型直接消费 |
+| **OpenCode** | ❌ 无（需插件） | **本地文件路径**（插件落盘） | 核心框架无保底机制，单模态模型粘贴图片报错。但插件生态丰富，`opencode-vision` 插件会自动拦截粘贴图片 → 保存临时文件 → 注入路径给 MCP |
 
-```text
-Mode C 错误日志提取   (最高优先级)
-Mode E 图表数据提取   ↓
-Mode B 问题定位修复   ↓
-Mode A 页面还原       ↓
-Mode D 文本OCR       (默认兜底)
-```
+> [!note] 结论来源
+> - Claude Code / Codex CLI / OpenCode 均为开源或有丰富官方文档的项目，以上结论基于官方文档 + 源码/插件源码分析。
+> - Claude Code 单模态报错基于作者使用 Mimo 模型的实际经验；GLM 例外基于智谱官方文档确认。
 
-触发逻辑：用户 prompt 里出现关键词决定走哪个模式。比如出现 `HTML/还原/Figma` 走 Mode A，出现 `error/stack/exception` 走 Mode C。
+#### 5.3.4 四大工具汇总
 
-> [!important] 这套模式系统回答了"是否要拆工具"的问题
-> 这位作者用 prompt 关键词触发不同模式，**本质就是"一个工具 + 模式参数"**，和本 MCP 的思路完全契合，进一步验证了 §2.3 的判断。
+| | ZCode | Claude Code | Codex CLI | OpenCode |
+|---|---|---|---|---|
+| **保底机制** | ✅ 有（内置） | ❌ 无 | ❌ 无 | ❌ 无（需插件） |
+| **多模态模型** | 图片直接消费 | 图片直接消费 | 图片直接消费 | 图片直接消费 |
+| **单模态+图片** | 上传图床 → URL → 内置 MCP | ❌ 报错（GLM 例外） | ❌ 默认多模态 | ❌ 报错（需插件桥接） |
+| **MCP 接收形态** | **http URL** | **本地文件路径** | **本地文件路径** | **本地文件路径**（插件落盘） |
+| **开源** | ❌ | ❌ | ✅ | ✅ |
 
-### 5.4 调研对本 MCP 的关键启示
+#### 5.3.5 调研结论：image_source / image_sources 需要支持的输入形态
 
-#### ✅ 作者的几个直觉被验证是对的
+上述全部调研工作，目的是确认本 MCP 工具的 `image_source`（单图，对应 `analyze_image`）和 `image_sources`（多图数组，对应 `analyze_images`）参数应该接收什么类型的数据。两者的输入形态要求一致，结论如下：
 
-1. **"提示词让基座模型自己生成"**——`observer` 作者完全靠基座模型自己根据用户意图生成 prompt，证实可行
-2. **"允许多次调用迭代"**——这正是所有现有方案都没做的事，本 MCP 的差异化点坐实了
-3. **"本地 MCP"**——所有方案都是本地 stdio，云端版本反而稀缺
+| 输入形态 | 来源场景 | 必须支持？ |
+|---------|---------|----------|
+| **http URL** | ZCode 保底机制（图片上传图床后以预签名 URL 传入）；linkseek 抓取网页后识别文中配图 | ✅ 必须 |
+| **本地文件路径** | Claude Code / OpenCode / Codex 场景（图片存本地，以路径传入 MCP） | ✅ 必须 |
+| **base64** | 兜底兼容（四大主流工具都不直接传 base64 给 MCP，但不排除少数 client 会这么做） | ⚠️ 兜底 |
 
-#### ⚠️ 本 MCP 可以做得更好的点
+> [!important] 设计决策
+> `image_source` / `image_sources` 设计为 **string 类型，自动识别**（URL / 文件路径 / base64），而非强制单一类型。原因：四大主流 Agent 对图片的传递形态不同，MCP 作为被调用方无法控制上游传什么，只能**兼容并自动识别**。
+>
+> 这与智谱 `@z_ai/mcp-server` 的设计一致（它支持 URL + 文件路径），但我们额外支持 base64 作为兜底。
 
-| 现有方案的局限 | 本 MCP 的机会 |
-|--------------|-------------|
-| 多数只支持 1 个模型 | **多 provider 可配**（首推 GPT-4V，可配 GLM/Claude/Gemini） |
-| 几乎都是一次性识别 | **多轮迭代**（核心差异化） |
-| 不考虑和搜索类 MCP 协同 | 文档层面引导与 linkseek 配合 |
-| 无文档图片智能提取 | `analyze_document` 工具跳过 logo/icon |
+#### 5.3.6 prompt 改写的问题（做本 MCP 的动机之一）
+
+ZCode 在调用 MCP 工具前会自动扩写 prompt，但这个能力**有限且容易出错**。实测验证：
+
+> 把一张头像图片重命名为「页面布局.png」，粘贴到 ZCode 输入框，问"图片中的内容是什么"。ZCode 果然根据文件名「页面布局」来编写识别提示词，最终识别结果从出发点就已经产生误差，后续误差只会越来越大。
+
+这正是作者不用 ZCode 内置 MCP、要自己做一个的核心原因之一：**把 prompt 的控制权交还给用户/基座模型，由 Agent 根据任务上下文自行生成、迭代，而非被客户端的简单改写规则误导。**
 
 ---
 
