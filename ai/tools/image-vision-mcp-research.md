@@ -55,12 +55,52 @@ type: 技术调研
 基座模型：综合文字 + 图片信息回答用户
 ```
 
-> [!warning] 关于"在 MCP 内置提示词中引导基座模型配合 linkseek"
-> 早期讨论曾考虑这个做法，**目前判定为反模式**：
+> [!warning] 反模式：在 MCP 内置提示词中引导基座模型配合 linkseek
+> 早期讨论曾考虑这个做法，**已判定为反模式**：
 > - 提示词硬编码耦合另一个产品，违反单一职责
 > - 不同用户可能没有 linkseek，提示词会误导
 >
-> **正确做法**：在本 MCP 的 README/文档中说明"建议与 linkseek 配合使用"并给出 workflow 示例，让用户在 `AGENTS.md` / `CLAUDE.md` 中自行编写协作规则。
+> 正确做法见下方「三层模型」——编排知识应放在独立的 Skills 层，而非塞进 MCP 工具内部。
+
+#### 三层模型：honlnk 生态的职责分层
+
+协作知识放哪里，曾经是讨论的焦点。早期设想「在 README 里说明，让用户在 AGENTS.md / CLAUDE.md 中自行编写协作规则」——这是最低成本方案，但有两个断点：README 是被动阅读（用户可能没读到），AGENTS.md 是用户手写（每个用户都要重写一遍）。最终确定引入 **Anthropic Agent Skills** 作为中间层，补上缺失的编排能力。
+
+```mermaid
+graph TD
+    subgraph 第三层["第三层：编排知识（honlnk-skills）"]
+        S1[skill: mcp-orchestration<br/>跨 MCP 协作]
+    end
+    subgraph 第二层["第二层：原子能力（MCP）"]
+        M1[linkseek<br/>云端·搜索/网页]
+        M2[本 MCP<br/>本地·图片识别]
+    end
+    subgraph 第一层["第一层：用户定制"]
+        U[AGENTS.md / CLAUDE.md<br/>项目级规则]
+    end
+
+    S1 -.引导/编排.-> M1
+    S1 -.引导/编排.-> M2
+    U ==读取==> S1
+
+    style S1 fill:#9b59b6,color:#fff
+    style M1 fill:#e67e22,color:#fff
+    style M2 fill:#e67e22,color:#fff
+    style U fill:#3498db,color:#fff
+```
+
+| 层 | 受众 | 何时起作用 | 放什么 |
+|---|---|---|---|
+| **README** | 人在 GitHub 浏览时 | 被动阅读 | 每个 MCP 是什么、怎么装、独立能力 |
+| **Skills** | Agent 运行时 | **自动加载**（靠 description 触发） | 跨工具编排、何时组合、workflow 范式 |
+| **AGENTS.md** | 用户自己的项目 | Agent 每次启动读 | 用户私有定制、项目级规则 |
+
+> [!tip] 为什么 Skills 是正确的层
+> Anthropic Agent Skills 采用 **progressive disclosure（渐进披露）**——未被触发的 skill 只占 name + description 的几十个 token，不拖累上下文。Agent 根据 task **自动判断是否加载**，不需要用户在每次对话里手动提醒，也不需要把协作规则抄进 AGENTS.md。
+>
+> 这干净地解了耦合问题：两个 MCP 本身**零耦合**，各自独立安装、独立工作；Skills 是独立的第三层，只承载「当同时拥有这两个工具时如何组合」的编排知识。没有 linkseek 的用户本 MCP 照样能用。
+
+详见独立计划文档：[[honlnk-skills-plan|honlnk-skills 计划]]（skills 的详细设计在**本 MCP 落地后**才启动）。
 
 ### 1.3 为什么是本地 MCP 而非云端
 
@@ -495,10 +535,27 @@ image-vision-mcp/
 
 本项目与 linkseek 一样计划开源。开源后需要：
 
-- [ ] 完整的 README（含与 linkseek 配合使用的 workflow 示例）
+- [ ] 完整的 README（说明独立能力，跨工具协作留给 honlnk-skills）
 - [ ] 多 Agent 接入指南（Claude Code / Codex / OpenCode / ZCode）
 - [ ] 多 provider 配置示例
 - [ ] 与 `opencode-vision` 等插件的协作说明
+
+### 7.1 与 honlnk-skills 的关系（配套但独立）
+
+本 MCP 的 README **只描述自身能力**，不内置任何「建议配合 linkseek 使用」的引导——那属于 [[honlnk-skills-plan|honlnk-skills]] 的职责。
+
+honlnk-skills 是作者个人生产力 Skills 合集，作为两个 MCP 之上的**编排层**：
+
+| 项目 | 层 | 定位 | 仓库 |
+|------|---|------|------|
+| linkseek | 原子能力（云端） | 联网搜索 + 网页获取 | 独立仓 |
+| **本 MCP** | 原子能力（本地） | 图片识别 | 独立仓 |
+| **honlnk-skills** | 编排层 | 跨 MCP 协作 workflow + 个人规范 | 独立仓（一仓多 skill） |
+
+**三者的关系**：各自独立开源、互不依赖。Skills 引用 MCP 但不要求 MCP 存在；MCP 不感知 Skills。用户可只装其中一个，也可三者全装获得完整生态体验。
+
+> [!note] 时机
+> honlnk-skills 的首个 skill（`mcp-orchestration`）**在本 MCP 落地后**才启动详细设计，现阶段不在 MCP 开发前做。
 
 ---
 
@@ -532,8 +589,10 @@ image-vision-mcp/
 ### 生态层面
 
 - [ ] 项目命名（目前暂用 `image-vision-mcp`，是否有更好的名字？）
-- [ ] 与 linkseek 的协作 workflow 文档化
+- [ ] 与 linkseek 的协作 workflow 文档化（交给 [[honlnk-skills-plan|honlnk-skills]] 的 `mcp-orchestration` skill 承载）
 - [ ] 开源仓库结构（是否与 linkseek 形成 monorepo？还是独立仓库？）
+- [ ] honlnk-skills 的首个 skill 启动时机（本 MCP 落地后）
+- [ ] 三层模型在 README / Skills / AGENTS.md 的内容边界确认
 
 ---
 
@@ -687,3 +746,4 @@ X-Title: 4.5V MCP Local
 | 日期 | 版本 | 变更 |
 |------|------|------|
 | 2026-07-21 | v0.1 | 初稿：基于与 ZCode（GLM-5.2）的多轮讨论整理，含市场调研、智谱逆向、需求雏形、工具设计建议 |
+| 2026-07-22 | v0.2 | §1.2 升级为「三层模型」，引入 honlnk-skills 作为编排层；§7 新增与 honlnk-skills 的关系；§8 新增生态层 agenda。配套新增 [[honlnk-skills-plan]] 独立计划文档 |
