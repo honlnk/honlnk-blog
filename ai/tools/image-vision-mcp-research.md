@@ -131,10 +131,12 @@ graph TD
 
 ### 2.1 智谱方案的核心特征
 
-- **按场景拆 8 个工具**：`ui_to_artifact` / `extract_text_from_screenshot` / `diagnose_error_screenshot` / `understand_technical_diagram` / `analyze_data_visualization` / `ui_diff_check` / `analyze_image` / `analyze_video`
-- **每个工具内置一套精心调优的 system prompt**（通过逆向确认：8 个 prompt 模板按 `<角色设定><task><approach><output_structure>` 结构组织，强制结构化输出）
-- **模型写死 GLM-4.6V**（仅支持 `Z_AI_MODE` 切换 ZAI/ZHIPU 两个平台）
-- **stdio 本地部署**
+> [!info] 以下结论基于阅读 `@z_ai/mcp-server@0.1.4` 源码（Apache-2.0 开源包，通过 `npm pack` 获取）核实。
+
+- **按场景拆 8 个工具**：`ui_to_artifact` / `extract_text_from_screenshot` / `diagnose_error_screenshot` / `understand_technical_diagram` / `analyze_data_visualization` / `ui_diff_check` / `analyze_image` / `analyze_video` ✅ 已核实（`index.js` 注册 8 个工具）
+- **每个工具内置一套精心调优的 system prompt**（通过阅读源码确认：8 个 prompt 模板采用 `<task><approach><output_structure>` 三段标签结构组织，角色设定写在 prompt 开头散文而非独立标签；强制结构化输出）
+- **默认模型 GLM-4.6V，可配置但仅面向智谱生态**（`environment.js`：`Z_AI_VISION_MODEL` 环境变量可覆盖默认值 `glm-4.6v`，`Z_AI_BASE_URL` 也可自定义；但 `PLATFORM_MODE` 预设只支持 ZAI / ZHIPU 两个平台的 URL，非「写死」）
+- **stdio 本地部署** ✅ 已核实（`StdioServerTransport`）
 
 ### 2.2 本 MCP 的反方向选择
 
@@ -142,7 +144,7 @@ graph TD
 |------|---------|--------|
 | 工具拆分 | 按场景拆 8 个 | **不按场景拆**（见 §4 分析） |
 | Prompt 来源 | 内置精心调优的 prompt | **由基座模型实时生成** |
-| 模型 | 写死 GLM-4.6V | **用户自配**（首推 GPT-4V 等世界最强多模态） |
+| 模型 | 默认 GLM-4.6V（可配但仅限智谱生态） | **任意 provider 自配**（首推 GPT-4V 等世界最强多模态） |
 | 部署 | stdio | stdio |
 | 多轮迭代 | 不支持 | **支持**（核心差异化） |
 
@@ -302,12 +304,12 @@ graph TD
 
 ### 5.2 流派 A 详细对比
 
-#### 5.2.1 智谱官方 `@z_ai/mcp-server`（已逆向，见附录 A）
+#### 5.2.1 智谱官方 `@z_ai/mcp-server`（已读源码，见附录 A）
 
-- **模型**：GLM-4.6V（写死，仅支持平台切换）
+- **模型**：默认 GLM-4.6V，通过 `Z_AI_VISION_MODEL` 环境变量可配置，但 `PLATFORM_MODE` 预设仅支持 ZAI / ZHIPU 两个平台
 - **工具**：8 个专项工具 + 1 个通用兜底 + 1 个视频
 - **亮点**：system prompt 工程精湛（8 套结构化 prompt），官方背书
-- **局限**：工具过度拆分、模型不可配、不支持多轮迭代
+- **局限**：工具过度拆分、模型配置仅面向智谱生态（非任意 provider）、不支持多轮迭代
 - **与本 MCP 的差异**：见 §2.2
 
 #### 5.2.2 `@systemmin/image-mcp`（多 provider 抽象最干净）
@@ -602,10 +604,10 @@ honlnk-skills 是作者个人生产力 Skills 合集，作为两个 MCP 之上�
 
 ---
 
-## 附录 A：智谱 `@z_ai/mcp-server` 逆向报告
+## 附录 A：智谱 `@z_ai/mcp-server` 源码分析报告
 
-> [!info] 逆向来源
-> 通过 `npm pack @z_ai/mcp-server@latest`（v0.1.4）下载并解压 npm 包，直接阅读编译后的 `build/*.js` 代码。包为 Apache-2.0 协议，允许逆向分析。
+> [!info] 分析来源
+> 通过 `npm pack @z_ai/mcp-server@latest`（v0.1.4）获取官方发布的 npm 包并解压，直接阅读其 `build/*.js`（编译产物）。包为 Apache-2.0 开源协议，源码阅读完全合规。
 
 ### A.1 包信息
 
@@ -751,5 +753,6 @@ X-Title: 4.5V MCP Local
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
-| 2026-07-21 | v0.1 | 初稿：基于与 ZCode（GLM-5.2）的多轮讨论整理，含市场调研、智谱逆向、需求雏形、工具设计建议 |
+| 2026-07-21 | v0.1 | 初稿：基于与 ZCode（GLM-5.2）的多轮讨论整理，含市场调研、智谱源码分析、需求雏形、工具设计建议 |
 | 2026-07-22 | v0.2 | §1.2 升级为「三层模型」，引入 honlnk-skills 作为编排层；§7 新增与 honlnk-skills 的关系；§8 新增生态层 agenda。配套新增 [[honlnk-skills-plan]] 独立计划文档 |
+| 2026-07-22 | v0.3 | §1.3 修正本地 vs 云端对比的归因（带宽/内存/鉴权/网络依赖）；§2.1/§2.2/§5.2.1/附录 A 基于 `@z_ai/mcp-server@0.1.4` 源码重新核实，修正「模型写死」等不准确表述，全文清除「逆向」误用 |
