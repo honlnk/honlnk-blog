@@ -207,13 +207,13 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 | 用了什么 prompt | ✅ 上一轮的 `arguments` 原样在历史里 | 无需 MCP 提供 |
 | 模型耗时 | ❌ 不知道 | 与识别质量决策无关，属调试信息，不暴露 |
 
-这与 §2.3 的哲学一致——MCP 只做无状态的转发层，所有决策交给基座模型。
+这与 §2.3 的哲学一致——prompt 控制权交给基座模型，MCP 不干预 prompt 内容。
 
 ### 3.5 实现要点
 
 - MCP 不负责"判断是否满足需求"——这个判断由基座模型完成
 - MCP 只负责：接收 image_source + prompt，调多模态模型，返回纯文本描述
-- 多轮迭代不需要 MCP 侧维护任何状态——基座模型从对话历史中自行获取上下文
+- 多轮迭代通过 MCP 侧的 **session 机制**实现——MCP 维护与视觉模型的完整对话历史，基座模型只需传递 sessionId，详见 §4.2
 
 ---
 
@@ -222,48 +222,136 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 > [!warning] 本节为初稿建议，尚未与作者确认
 > 工具拆分方案是调研后给出的建议，作者明确表示"这个任务你应该可以比我做出更好的决策"。本节方案需要进一步讨论确认。
 
-### 4.1 建议方案：3 个工具，按输入形态拆
+### 4.1 工具总览：按输入形态拆 + 会话管理
 
-基于调研结论，建议**不按场景拆，按输入形态拆**：
+**不按场景拆，按输入形态拆**（理由见 §2.3）。同时增加一个会话管理工具，支撑多轮迭代：
 
 | 工具 | 输入 | 用途 |
 |------|------|------|
-| `analyze_image` | 单图 + prompt + context | 单图识别 + 多轮迭代（核心工具，覆盖 80% 场景） |
-| `analyze_images` | 多图数组 + prompt + context | 多图对比/批量识别 |
-| `analyze_document` | 文档（URL/HTML/markdown） + prompt + options | 智能提取文档中有价值的图来识别 |
+| `analyze_image` | 单图 + prompt + session_id? | 单图识别 + 多轮迭代（核心工具，覆盖 80% 场景） |
+| `analyze_images` | 多图数组 + prompt + session_id? | 多图对比/批量识别 |
+| `analyze_document` | 文档（URL/HTML/markdown） + prompt + options | 智能提取文档中有价值的图来识别（待讨论） |
+| `list_sessions` | 无 | 查看当前所有 session 的列表 + 简介 |
 
 **为什么这样拆**：
 - **不按场景拆**（不搞 OCR/UI/图表独立工具）——见 §2.3 论据
 - **按输入形态拆**——单图 vs 多图 vs 文档，schema 完全不同，强行塞一个工具会让参数很乱
 - **`analyze_document` 独立**——"识别哪些图有价值"是个复杂决策（要排除 logo/icon/装饰图），值得独立工具专门优化
+- **`list_sessions` 独立**——让基座模型能随时查看历史 session，恢复上下文记忆
 
-### 4.2 单工具参数 schema 草案
+### 4.2 Session 机制：多轮迭代的核心
+
+#### 4.2.1 为什么不用 context 参数，改用 session
+
+多轮迭代场景下，视觉模型需要以**原生多轮对话**的方式看到之前的交互历史，而非被压扁成单轮 prompt 文本。如果用 `context` 参数让基座模型把历史信息传进来，存在两个问题：
+
+1. **基座模型当搬运工**——要从 Agent 的对话历史中提炼、组织成 context 文本，额外消耗 token 且可能失真
+2. **视觉模型拿到的是单轮**——context 被塞进 prompt 文本，视觉模型无法以多轮对话的方式自然回顾自己上次的描述
+
+因此改为 **session 机制**：MCP 自己管理与视觉模型的完整对话历史，基座模型只需传递一个 `session_id` 字符串。
+
+> [!note] session_id 与 context 的对比
+> | | context 参数 | session_id |
+> |---|---|---|
+> | 视觉模型看到的 | 单轮（历史被塞进 prompt 文本） | 原生多轮（完整的 messages 数组） |
+> | 基座模型负担 | 要读历史、提炼、组织成 context | 只需传回一个字符串 |
+> | 可靠性 | 模型可能漏细节、改写失真 | MCP 原样存储，零损耗 |
+> | MCP 复杂度 | 低（无状态） | 中（需管理 session 生命周期） |
+
+#### 4.2.2 session 的数据结构
+
+```typescript
+interface Session {
+  id: string                   // session 唯一标识
+  summary: string              // 简介，由视觉模型生成（见 4.2.4）
+  imageSource: string          // 图片引用（URL / path / base64）
+  messages: VisionMessage[]    // 发给视觉模型的完整多轮对话历史
+  createdAt: timestamp
+  lastAccessAt: timestamp
+}
+```
+
+#### 4.2.3 生命周期
+
+| 阶段 | 触发 | 行为 |
+|------|------|------|
+| **创建** | 首次调用 `analyze_image` / `analyze_images`（不传 `session_id`） | MCP 内部创建 session，返回 `session_id` |
+| **追加** | 后续调用时传入 `session_id` | MCP 找到对应 session，将新 prompt 追加到 `messages`，调视觉模型 |
+| **过期** | 距 `lastAccessAt` 超过 **24 小时** | 定时任务清理，session 被移除 |
+| **销毁** | MCP 进程退出 | 全部 session 自然清空（内存态，不持久化），基座模型走首次调用即可重建 |
+
+#### 4.2.4 summary 的生成
+
+首次调用创建 session 时，**让视觉模型在返回描述的同时生成一句简介**，与 `session_id` 一并返回。简介精度高于简单截取。
+
+#### 4.2.5 并发隔离
+
+多 Agent（或单 Agent 并行多工具调用）可能同时操作不同 session，甚至同一 session 发起多轮。隔离方案：
+
+| 场景 | 处理方式 |
+|------|---------|
+| **不同 session 并发** | 天然隔离，互不干扰——每个 session 独立，并行执行 |
+| **同一 session 并发写** | session 级互斥锁（`Map<session_id, Mutex>`），同一 session 的请求串行执行，避免 messages 数组写冲突 |
+| **list_sessions 并发读** | 读快照（浅拷贝列表），不阻塞写操作 |
+| **清理任务** | 跳过正在使用的 session（检查锁状态） |
+
+实际并发瓶颈不在 MCP 本地，而在视觉模型 API 的 rate limit——这部分由 provider adapter 自带的重试机制处理，不需要 MCP 层额外管理。
+
+#### 4.2.6 工具参数 schema
 
 > [!info] 关于 `image_source` / `image_sources` 的数据类型
 > 详见 [[#5.3.5 调研结论：image_source 需要支持的输入形态]]。核心结论：不同 Agent 传递图片的形态不同（ZCode 传 http URL，Claude Code / OpenCode / Codex 传本地文件路径），MCP 作为被调用方无法控制上游，因此设计为 **string 类型，自动识别**（URL / 文件路径 / base64 三种形态兼容）。
 
-#### `analyze_image`
+##### `analyze_image`
 
 ```typescript
+// 输入
 {
   image_source: string,        // http URL / 本地文件路径 / base64（自动识别）
   prompt: string,              // 基座模型根据用户意图实时生成
-  context?: {                  // 多轮迭代的核心
-    previous_descriptions?: string[],  // 之前 MCP 返回的描述
-    user_feedback?: string,            // "不够详细" / "颜色描述错了"
-    focus_area?: string,               // "重点关注导航栏"
-    iteration?: number                 // 第几轮迭代
-  }
+  session_id?: string          // 传入已有 session 发起后续轮次；不传则为首次调用，MCP 创建新 session
+}
+
+// 返回
+{
+  session_id: string,          // 本次调用所属的 session（首次调用时为新创建）
+  summary: string,             // session 简介（首次调用时由视觉模型生成，后续轮次原样返回）
+  description: string          // 识别结果（纯文本）
 }
 ```
 
-#### `analyze_images`
+##### `analyze_images`
 
 ```typescript
+// 输入
 {
   image_sources: string[],     // 多张图，每项同 image_source（URL / 本地路径 / base64，自动识别）
   prompt: string,
-  context?: { ... }            // 同上
+  session_id?: string          // 同 analyze_image
+}
+
+// 返回
+{
+  session_id: string,
+  summary: string,
+  description: string
+}
+```
+
+##### `list_sessions`
+
+```typescript
+// 输入：无
+
+// 返回
+{
+  sessions: Array<{
+    session_id: string,
+    summary: string,           // session 简介
+    image_source: string,      // 关联的图片（截断显示）
+    last_access_at: timestamp, // 最后访问时间
+    iteration: number          // 已迭代轮数
+  }>
 }
 ```
 
@@ -285,7 +373,6 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 
 - [ ] 是否真的需要 `analyze_images`？多图对比场景的频率有多高？
 - [ ] `analyze_document` 的"智能提取有价值的图"具体怎么做？启发式规则 vs 让多模态模型自己筛？
-- [ ] `context` 参数是否应该有上限（避免无限迭代）？
 - [ ] 视频识别作为 v2 扩展，参数 schema 如何预留？
 
 ---
@@ -450,15 +537,15 @@ ZCode 在调用 MCP 工具前会自动扩写 prompt，但这个能力**有限且
 
 ### 6.1 技术栈建议
 
-| 维度 | 建议 | 理由 |
-|------|------|------|
-| 语言 | TypeScript（Node.js） | 与 linkseek 一致，生态成熟，MCP SDK 一等公民 |
-| MCP 传输 | stdio | 本地 MCP 的主流形态，所有竞品都这么做 |
-| MCP SDK | `@modelcontextprotocol/sdk` | 官方 SDK |
-| 参数校验 | zod | SDK 内置支持 |
-| 多 provider | `VisionProvider` 接口 | 参考 `@systemmin/image-mcp` |
-| 首版 provider | OpenAI（GPT-4V） | 作者明确倾向"世界最好的多模态模型" |
-| 后续 provider | GLM-4V / Claude / Gemini | 按需扩展 |
+| 维度          | 建议                          | 理由                              |
+| ----------- | --------------------------- | ------------------------------- |
+| 语言          | TypeScript（Node.js）         | 与 linkseek 一致，生态成熟，MCP SDK 一等公民 |
+| MCP 传输      | stdio                       | 本地 MCP 的主流形态，所有竞品都这么做           |
+| MCP SDK     | `@modelcontextprotocol/sdk` | 官方 SDK                          |
+| 参数校验        | zod                         | SDK 内置支持                        |
+| 多 provider  | `VisionProvider` 接口         | 参考 `@systemmin/image-mcp`       |
+| 首版 provider | OpenAI（ChatGPT-5.6-sol）     | 作者明确倾向"世界最好的多模态模型"              |
+| 后续 provider | Qwen / Kimi                 | 按需扩展                            |
 
 ### 6.2 配置方式
 
@@ -514,7 +601,7 @@ image-vision-mcp/
 
 ### 6.4 待讨论的实现问题
 
-- [ ] 多 provider 的接口如何抽象？是否支持运行时切换，还是启动时固定？
+- [ ] 多 provider 的接口如何抽象？是否支持运行时切换，还是启动时固定？(变量名配置)
 - [ ] SSRF 防护是否要复用 linkseek 的实现？
 - [ ] 多轮迭代的 `context` 如何拼到多模态模型的 messages 里？
 - [ ] 图片大小/格式限制（智谱硬编码 jpg/png/5MB，本 MCP 是否更宽松？）
