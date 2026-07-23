@@ -584,9 +584,8 @@ image-vision-mcp/
 本项目与 linkseek 一样计划开源。开源后需要：
 
 - [ ] 完整的 README（说明独立能力，跨工具协作留给 honlnk-skills）
-- [ ] 多 Agent 接入指南（Claude Code / Codex / OpenCode / ZCode）
-- [ ] 多 provider 配置示例
-- [ ] 与 `opencode-vision` 等插件的协作说明
+- [ ] ZCode 接入指南（其他 Agent 暂不考虑）
+- [ ] 多 provider 配置示例（OpenAI / Qwen / Kimi）
 
 ### 7.1 与 honlnk-skills 的关系（配套但独立）
 
