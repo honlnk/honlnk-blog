@@ -4,23 +4,24 @@ tags:
   - AI工具
   - 图片识别
   - 视觉模型
-  - 方案调研
+  - 设计文档
 aliases:
+  - picsense
   - 图片识别 MCP
   - 视觉 MCP
   - Vision MCP
 date: 2026-07-21
-status: draft
-type: 技术调研
+status: ready
+type: 设计文档
 ---
 
-# 图片识别 MCP 调研与需求文档
+# picsense：图片识别 MCP 设计文档
 
 > [!abstract] 项目定位
-> 一款**本地安装**的图片识别 MCP，让任何基座模型（包括 GLM-5.2 这类单模态模型）都能通过 MCP 调用多模态能力识别图片。与已开源的 [[ai/tools/web-fetch-mcp-server-design|linkseek]] 同属个人 AI 工具生态，二者可由基座模型自主编排配合使用。本文档为**需求雏形 + 市场调研**，后续讨论以本文档为基线持续迭代。
+> 一款**本地安装**的图片识别 MCP，让任何基座模型（包括 GLM-5.2 这类单模态模型）都能通过 MCP 调用多模态能力识别图片。与已开源的 [[ai/tools/web-fetch-mcp-server-design|linkseek]] 同属个人 AI 工具生态，二者可由基座模型自主编排配合使用。
 
 > [!info] 文档状态
-> 🟡 **draft - 雏形阶段**。本文档由 ZCode（GLM-5.2）与作者共同讨论整理而成，目前的调研还不够完美，但已有雏形。后续讨论将基于本文档进行，通过不断优化文档而非依赖对话记忆来推进需求。
+> ✅ **ready - 设计定稿**。本文档由 ZCode（GLM-5.2）与作者共同讨论整理而成，核心设计已全部落地，可进入开发阶段。
 
 ---
 

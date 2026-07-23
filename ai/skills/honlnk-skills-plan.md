@@ -20,7 +20,7 @@ type: 方案规划
 > `honlnk-skills` 是作者个人生产力 Skills 合集的开源仓库，作为 **linkseek（云端 MCP）+ 图片识别 MCP（本地 MCP）** 之上的**第三层**，承载跨工具编排知识、开发规范、个人工作流。采用「**一个仓库，多个独立 skill**」结构。
 
 > [!quote] 背景
-> 随着自研 MCP 工具逐渐增多（[[web-fetch-mcp-server-design|linkseek]]、[[image-vision-mcp-research|图片识别 MCP]]），一个编排问题浮现：如何让 Agent 知道「这些工具可以组合使用」「什么场景该组合」？答案是 Skills——它能被 Agent 在运行时自动加载，而不需要用户手写协作规则。详见 [[image-vision-mcp-research]] §1.2 的三层模型。
+> 随着自研 MCP 工具逐渐增多（[[web-fetch-mcp-server-design|linkseek]]、[[picsense-design|picsense]]），一个编排问题浮现：如何让 Agent 知道「这些工具可以组合使用」「什么场景该组合」？答案是 Skills——它能被 Agent 在运行时自动加载，而不需要用户手写协作规则。详见 [[picsense-design]] §1.2 的三层模型。
 
 ## 一、为什么需要 honlnk-skills
 
@@ -184,7 +184,7 @@ description: 这个 skill 做什么 + 什么场景触发。description 是 Agent
 **预期 description 方向**：
 > 当用户任务同时涉及「联网搜索/获取网页内容」与「图片/视觉识别」时使用。指导 Agent 先用 linkseek 获取网页文字、识别文中配图 URL，再用图片识别 MCP 识别图片内容，综合文字 + 视觉信息回答。
 
-**典型 workflow**（已在 [[image-vision-mcp-research]] §1.2 提及）：
+**典型 workflow**（已在 [[picsense-design]] §1.2 提及）：
 ```text
 用户："分析这篇文章里这张架构图的设计是否合理"
   ↓ Agent 自主编排
