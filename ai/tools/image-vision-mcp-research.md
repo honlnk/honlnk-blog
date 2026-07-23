@@ -189,12 +189,31 @@ graph TD
 >
 > 这种"边干边查"的能力，是一次性识别方案做不到的。
 
-### 3.4 实现要点（待细化）
+### 3.4 返回结果：不带元信息，只返回识别内容
 
-- `context` 参数承载历史交互信息（见 §4.1）
+MCP 返回结果只返回识别内容本身（描述文本），不附带任何元信息（第几轮、用了什么 prompt、模型耗时等）。
+
+> [!important] 调研结论（Codex + OpenCode 源码确认）
+> AI agent 调用 MCP 工具后，**tool call 的输入参数和返回结果都会被完整存入对话历史**，并在后续每一轮 LLM 请求中原样带上。
+>
+> - **Codex**（Rust）：工具调用的 `arguments`（JSON）存为 `ResponseItem::FunctionCall`，MCP 返回内容存为 `ResponseItem::FunctionCallOutput`，两者都进入 `ContextManager.items`，下一轮经 `for_prompt()` 全量发给模型。
+> - **OpenCode**（TypeScript）：工具调用的 `input` 和 MCP 返回的 `output` 都持久化为 `ToolPart.state`（SQLite），每轮经 `toModelMessagesEffect()` 重建为标准 `tool-call` + `tool-result` 消息发给模型。
+
+基座模型从对话历史中即可自行获取一切决策所需的信息：
+
+| 元信息 | 基座模型是否已知 | 结论 |
+|-------|----------------|------|
+| 第几轮 | ✅ 上下文里有完整的历次调用记录，自己数得出来 | 无需 MCP 提供 |
+| 用了什么 prompt | ✅ 上一轮的 `arguments` 原样在历史里 | 无需 MCP 提供 |
+| 模型耗时 | ❌ 不知道 | 与识别质量决策无关，属调试信息，不暴露 |
+
+这与 §2.3 的哲学一致——MCP 只做无状态的转发层，所有决策交给基座模型。
+
+### 3.5 实现要点
+
 - MCP 不负责"判断是否满足需求"——这个判断由基座模型完成
-- MCP 只负责：接收 prompt + context，调多模态模型，返回结果
-- 返回结果需要带元信息（第几轮、用了什么 prompt、模型耗时等），便于基座模型决策
+- MCP 只负责：接收 image_source + prompt，调多模态模型，返回纯文本描述
+- 多轮迭代不需要 MCP 侧维护任何状态——基座模型从对话历史中自行获取上下文
 
 ---
 
