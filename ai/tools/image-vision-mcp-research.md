@@ -217,10 +217,7 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 
 ---
 
-## 四、工具设计（待讨论）
-
-> [!warning] 本节为初稿建议，尚未与作者确认
-> 工具拆分方案是调研后给出的建议，作者明确表示"这个任务你应该可以比我做出更好的决策"。本节方案需要进一步讨论确认。
+## 四、工具设计
 
 ### 4.1 工具总览
 
@@ -516,9 +513,7 @@ ZCode 在调用 MCP 工具前会自动扩写 prompt，但这个能力**有限且
 
 ---
 
-## 六、技术栈与实现方向（待细化）
-
-> [!warning] 本节为方向性建议，尚未与作者讨论确认
+## 六、技术栈与实现方向
 
 ### 6.1 技术栈建议
 
@@ -534,7 +529,7 @@ ZCode 在调用 MCP 工具前会自动扩写 prompt，但这个能力**有限且
 
 ### 6.2 配置方式
 
-参考 `@systemmin/image-mcp` 的环境变量方案：
+参考 `@systemmin/image-mcp` 的环境变量方案，通过环境变量配置各 provider 的 API Key 和模型名，不在代码内部硬编码：
 
 ```bash
 # 默认 provider
@@ -542,22 +537,18 @@ DEFAULT_PROVIDER=openai
 
 # OpenAI
 OPENAI_API_KEY=sk-xxx
-OPENAI_MODEL=gpt-4o
+OPENAI_MODEL=chatgpt-5.6-sol
 
-# 智谱（备选）
-ZHIPU_API_KEY=xxx
-ZHIPU_MODEL=glm-4v
+# Qwen
+QWEN_API_KEY=xxx
+QWEN_MODEL=qwen-vl-max
 
-# Claude（备选）
-ANTHROPIC_API_KEY=sk-ant-xxx
-ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
-
-# 本地 Ollama（备选）
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llava
+# Kimi
+KIMI_API_KEY=xxx
+KIMI_MODEL=moonshot-v1-vision
 ```
 
-### 6.3 项目结构（初稿）
+### 6.3 项目结构
 
 ```text
 image-vision-mcp/
@@ -566,31 +557,25 @@ image-vision-mcp/
 ├── src/
 │   ├── index.ts                  # MCP Server 入口
 │   ├── tools/
-│   │   ├── analyze-image.ts      # 单图识别 + 多轮迭代
-│   │   ├── analyze-images.ts     # 多图对比
-│   │   └── analyze-document.ts   # 文档图片提取
+│   │   ├── analyze-images.ts     # 图片识别 + 多轮迭代（单图/多图统一）
+│   │   ├── analyze-document.ts   # 文档图片标注
+│   │   └── list-sessions.ts      # 会话列表
 │   ├── providers/
 │   │   ├── index.ts              # VisionProvider 接口 + 工厂
-│   │   ├── openai.ts             # GPT-4V 适配器
-│   │   ├── zhipu.ts              # GLM-4V 适配器
-│   │   ├── anthropic.ts          # Claude 适配器
-│   │   └── ollama.ts             # Ollama 适配器
+│   │   ├── openai.ts             # OpenAI 适配器
+│   │   ├── qwen.ts               # Qwen 适配器
+│   │   └── kimi.ts               # Kimi 适配器
 │   ├── core/
-│   │   ├── image-loader.ts       # 图片加载（路径/URL/base64）
-│   │   └── context-builder.ts    # 多轮迭代上下文构建
+│   │   ├── image-loader.ts       # 图片加载（路径/URL/base64 自动识别）
+│   │   └── session-manager.ts    # Session 生命周期 + 并发隔离
 │   └── utils/
-│       ├── ssrf-guard.ts         # SSRF 防护（URL 图片用）
-│       └── config.ts             # 配置管理
+│       └── config.ts             # 环境变量配置管理
 └── README.md
 ```
 
-### 6.4 待讨论的实现问题
+### 6.4 图片大小限制
 
-- [ ] 多 provider 的接口如何抽象？是否支持运行时切换，还是启动时固定？(变量名配置)
-- [ ] SSRF 防护是否要复用 linkseek 的实现？
-- [ ] 多轮迭代的 `context` 如何拼到多模态模型的 messages 里？
-- [ ] 图片大小/格式限制（智谱硬编码 jpg/png/5MB，本 MCP 是否更宽松？）
-- [ ] 缓存机制（同图同 prompt 是否缓存？参考 `opencode-multimodal`）
+单张图片限制 **5MB**，格式支持 jpg / jpeg / png。
 
 ---
 
@@ -626,29 +611,6 @@ honlnk-skills 是作者个人生产力 Skills 合集，作为两个 MCP 之上�
 
 > [!important] 本节是后续与作者讨论的 agenda，每项讨论完后更新对应章节并打勾
 
-### 需求层面
-
-- [ ] 工具拆分方案确认（§4.1 的 3 工具方案是否采纳？）
-- [ ] `analyze_images` 是否必要？多图对比场景频率有多高？
-- [ ] `analyze_document` 的"智能提取有价值的图"具体策略？
-- [ ] 多轮迭代的边界（是否需要防滥用上限？）
-- [ ] 视频识别作为 v2 的预留设计
-
-### 技术层面
-
-- [ ] 首版 provider 确认（GPT-4V？还是先支持多个？）
-- [ ] `VisionProvider` 接口的具体抽象方式
-- [ ] `context` 参数如何拼到多模态模型 messages
-- [ ] SSRF 防护实现（复用 linkseek or 重写）
-- [ ] 缓存机制设计
-
-### 调研层面
-
-- [ ] OpenAI / Gemini vision API 的官方文档深挖（多 provider 实现必做）
-- [ ] `@systemmin/image-mcp` 源码精读（provider 抽象参考）
-- [ ] GPT-4V vs GLM-4V vs Claude Vision 的效果/成本/速度对比
-- [ ] 视频识别方案调研（v2 启动前）
-
 ### 生态层面
 
 - [ ] 项目命名（目前暂用 `image-vision-mcp`，是否有更好的名字？）
@@ -656,6 +618,12 @@ honlnk-skills 是作者个人生产力 Skills 合集，作为两个 MCP 之上�
 - [ ] 开源仓库结构（是否与 linkseek 形成 monorepo？还是独立仓库？）
 - [ ] honlnk-skills 的首个 skill 启动时机（本 MCP 落地后）
 - [ ] 三层模型在 README / Skills / AGENTS.md 的内容边界确认
+
+### 调研层面
+
+- [ ] OpenAI / Qwen / Kimi vision API 的官方文档深挖（实现前必做）
+- [ ] `@systemmin/image-mcp` 源码精读（provider 抽象参考）
+- [ ] 视频识别方案调研（后续启动时）
 
 ---
 
