@@ -613,7 +613,6 @@ honlnk-skills 是作者个人生产力 Skills 合集，作为两个 MCP 之上�
 ### 生态层面
 
 - [ ] 与 linkseek 的协作 workflow 文档化（交给 [[honlnk-skills-plan|honlnk-skills]] 的 `mcp-orchestration` skill 承载）
-- [ ] 开源仓库结构（是否与 linkseek 形成 monorepo？还是独立仓库？）
 - [ ] honlnk-skills 的首个 skill 启动时机（本 MCP 落地后）
 - [ ] 三层模型在 README / Skills / AGENTS.md 的内容边界确认
 
