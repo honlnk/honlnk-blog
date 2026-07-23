@@ -222,21 +222,21 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 > [!warning] 本节为初稿建议，尚未与作者确认
 > 工具拆分方案是调研后给出的建议，作者明确表示"这个任务你应该可以比我做出更好的决策"。本节方案需要进一步讨论确认。
 
-### 4.1 工具总览：按输入形态拆 + 会话管理
+### 4.1 工具总览
 
 **不按场景拆，按输入形态拆**（理由见 §2.3）。同时增加一个会话管理工具，支撑多轮迭代：
 
 | 工具 | 输入 | 用途 |
 |------|------|------|
-| `analyze_image` | 单图 + prompt + session_id? | 单图识别 + 多轮迭代（核心工具，覆盖 80% 场景） |
-| `analyze_images` | 多图数组 + prompt + session_id? | 多图对比/批量识别 |
-| `analyze_document` | 文档（URL/HTML/markdown） + prompt + options | 智能提取文档中有价值的图来识别（待讨论） |
+| `analyze_images` | 图片数组 + prompt + session_id? | 图片识别 + 多轮迭代（核心工具，传一张是单图，传多张是批量/对比） |
+| `analyze_document` | 文档（URL/HTML/markdown） | 解析文档，识别其中所有图片，返回标注了图片描述的完整文档 |
 | `list_sessions` | 无 | 查看当前所有 session 的列表 + 简介 |
 
 **为什么这样拆**：
 - **不按场景拆**（不搞 OCR/UI/图表独立工具）——见 §2.3 论据
-- **按输入形态拆**——单图 vs 多图 vs 文档，schema 完全不同，强行塞一个工具会让参数很乱
-- **`analyze_document` 独立**——"识别哪些图有价值"是个复杂决策（要排除 logo/icon/装饰图），值得独立工具专门优化
+- **按输入形态拆**——图片 vs 文档，schema 完全不同，强行塞一个工具会让参数很乱
+- **单图与多图合并**——`image_sources: string[]` 统一处理，传一张是单图，传多张是批量/对比，没有必要拆成两个工具
+- **`analyze_document` 独立**——职责完全不同，输入文档、输出标注文档，与 `analyze_images` 的「输入图片、返回描述」是两种工作模式
 - **`list_sessions` 独立**——让基座模型能随时查看历史 session，恢复上下文记忆
 
 ### 4.2 Session 机制：多轮迭代的核心
@@ -249,7 +249,7 @@ MCP 通过 session 机制管理与视觉模型的完整多轮对话历史，基�
 interface Session {
   id: string                   // session 唯一标识
   summary: string              // 简介，由视觉模型生成（见 4.2.3）
-  imageSource: string          // 图片引用（URL / path / base64）
+  imageSources: string[]       // 图片引用数组（URL / path / base64）
   messages: VisionMessage[]    // 发给视觉模型的完整多轮对话历史
   createdAt: timestamp
   lastAccessAt: timestamp
@@ -260,7 +260,7 @@ interface Session {
 
 | 阶段 | 触发 | 行为 |
 |------|------|------|
-| **创建** | 首次调用 `analyze_image` / `analyze_images`（不传 `session_id`） | MCP 内部创建 session，返回 `session_id` |
+| **创建** | 首次调用 `analyze_images`（不传 `session_id`） | MCP 内部创建 session，返回 `session_id` |
 | **追加** | 后续调用时传入 `session_id` | MCP 找到对应 session，将新 prompt 追加到 `messages`，调视觉模型 |
 | **过期** | 距 `lastAccessAt` 超过 **24 小时** | 定时任务清理，session 被移除 |
 | **销毁** | MCP 进程退出 | 全部 session 自然清空（内存态，不持久化），基座模型走首次调用即可重建 |
@@ -289,14 +289,14 @@ interface Session {
 
 每个工具的 `description` 和各参数的 `description` 是 MCP 注册时暴露给 Agent 的说明文字。现阶段只写简洁描述，详细的 prompt 工程教程留给后续的 Skills 层。
 
-##### `analyze_image`
+##### `analyze_images`
 
 ```typescript
-// tool description: "识别单张图片的内容。支持多轮迭代——首次调用创建 session，后续调用传入 session_id 可在已有对话基础上追加提问。"
+// tool description: "识别图片内容。传入一张图片为单图识别，传入多张为批量或对比识别。支持多轮迭代——首次调用创建 session，后续调用传入 session_id 可在已有对话基础上追加提问。"
 
 // 输入
 {
-  image_source: string,        // 图片来源，自动识别 http URL / 本地文件路径 / base64 三种形态
+  image_sources: string[],     // 图片来源数组（传一张为单图识别，传多张为批量/对比），每项自动识别 http URL / 本地文件路径 / base64
   prompt: string,              // 对图片的识别要求，根据当前任务意图编写
   session_id?: string          // 传入已有 session 的 ID 以发起后续轮次；不传则创建新 session
 }
@@ -306,26 +306,6 @@ interface Session {
   session_id: string,          // 本次调用所属的 session
   summary: string,             // session 简介（首次调用时由视觉模型生成，后续轮次原样返回）
   description: string          // 识别结果（纯文本）
-}
-```
-
-##### `analyze_images`
-
-```typescript
-// tool description: "识别多张图片，支持对比或批量识别。支持多轮迭代，机制同 analyze_image。"
-
-// 输入
-{
-  image_sources: string[],     // 多张图片来源，每项自动识别 http URL / 本地文件路径 / base64
-  prompt: string,              // 对图片的识别要求，根据当前任务意图编写
-  session_id?: string          // 传入已有 session 的 ID 以发起后续轮次；不传则创建新 session
-}
-
-// 返回
-{
-  session_id: string,
-  summary: string,
-  description: string
 }
 ```
 
@@ -341,31 +321,43 @@ interface Session {
   sessions: Array<{
     session_id: string,        // session 唯一标识
     summary: string,           // session 简介
-    image_source: string,      // 关联的图片（截断显示）
+    image_sources: string[],   // 关联的图片（截断显示）
     last_access_at: timestamp, // 最后访问时间
     iteration: number          // 已迭代轮数
   }>
 }
 ```
 
-#### `analyze_document`
+##### `analyze_document`
 
 ```typescript
+// tool description: "解析文档，识别其中所有图片的内容，并在图片位置旁标注描述。返回标注后的完整文档。"
+
+// 输入
 {
-  document: string,            // 文档 URL / HTML / markdown
-  prompt: string,              // 用户对图片识别的具体诉求
-  options?: {
-    max_images?: number,       // 最多识别几张图（控制成本）
-    skip_decorative?: boolean, // 跳过 logo/icon/装饰图（默认 true）
-    min_image_size?: number    // 跳过过小的图（如 1x1 tracking pixel）
-  }
+  document: string             // 文档 URL / HTML / markdown（自动识别）
+}
+
+// 返回
+{
+  document: string             // 标注了图片描述的完整文档
+  images_analyzed: number      // 本次识别了多少张图
 }
 ```
 
+**职责单一**：输入文档，输出文档。工具内置识别 prompt，不接收外部 prompt 参数。哪些图片值得识别、识别到什么程度，全部交给基座模型结合上下文判断——MCP 不预设任何筛选规则。
+
+**标注格式**：在原文档的图片位置旁用注释标记描述，不破坏原文档渲染。以 markdown 为例：
+
+```markdown
+![架构图](./arch.png)
+<!-- image-vision: 这是一个三层架构图，包含前端层、API 网关层和数据层... -->
+```
+
+基座模型拿到标注后的文档，自行结合上下文判断哪些图片信息对其任务有用。如果对某张图需要更详细的描述，可用 `analyze_images` 单独精修。
+
 ### 4.3 待讨论的开放问题
 
-- [ ] 是否真的需要 `analyze_images`？多图对比场景的频率有多高？
-- [ ] `analyze_document` 的"智能提取有价值的图"具体怎么做？启发式规则 vs 让多模态模型自己筛？
 - [ ] 视频识别作为 v2 扩展，参数 schema 如何预留？
 
 ---
