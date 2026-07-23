@@ -241,29 +241,14 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 
 ### 4.2 Session 机制：多轮迭代的核心
 
-#### 4.2.1 为什么不用 context 参数，改用 session
+MCP 通过 session 机制管理与视觉模型的完整多轮对话历史，基座模型只需传递一个 `session_id` 字符串即可在已有对话基础上继续迭代。视觉模型拿到的是**原生多轮对话**（完整的 messages 数组），而非被压扁成单轮 prompt 文本。
 
-多轮迭代场景下，视觉模型需要以**原生多轮对话**的方式看到之前的交互历史，而非被压扁成单轮 prompt 文本。如果用 `context` 参数让基座模型把历史信息传进来，存在两个问题：
-
-1. **基座模型当搬运工**——要从 Agent 的对话历史中提炼、组织成 context 文本，额外消耗 token 且可能失真
-2. **视觉模型拿到的是单轮**——context 被塞进 prompt 文本，视觉模型无法以多轮对话的方式自然回顾自己上次的描述
-
-因此改为 **session 机制**：MCP 自己管理与视觉模型的完整对话历史，基座模型只需传递一个 `session_id` 字符串。
-
-> [!note] session_id 与 context 的对比
-> | | context 参数 | session_id |
-> |---|---|---|
-> | 视觉模型看到的 | 单轮（历史被塞进 prompt 文本） | 原生多轮（完整的 messages 数组） |
-> | 基座模型负担 | 要读历史、提炼、组织成 context | 只需传回一个字符串 |
-> | 可靠性 | 模型可能漏细节、改写失真 | MCP 原样存储，零损耗 |
-> | MCP 复杂度 | 低（无状态） | 中（需管理 session 生命周期） |
-
-#### 4.2.2 session 的数据结构
+#### 4.2.1 session 的数据结构
 
 ```typescript
 interface Session {
   id: string                   // session 唯一标识
-  summary: string              // 简介，由视觉模型生成（见 4.2.4）
+  summary: string              // 简介，由视觉模型生成（见 4.2.3）
   imageSource: string          // 图片引用（URL / path / base64）
   messages: VisionMessage[]    // 发给视觉模型的完整多轮对话历史
   createdAt: timestamp
@@ -271,7 +256,7 @@ interface Session {
 }
 ```
 
-#### 4.2.3 生命周期
+#### 4.2.2 生命周期
 
 | 阶段 | 触发 | 行为 |
 |------|------|------|
@@ -280,11 +265,11 @@ interface Session {
 | **过期** | 距 `lastAccessAt` 超过 **24 小时** | 定时任务清理，session 被移除 |
 | **销毁** | MCP 进程退出 | 全部 session 自然清空（内存态，不持久化），基座模型走首次调用即可重建 |
 
-#### 4.2.4 summary 的生成
+#### 4.2.3 summary 的生成
 
-首次调用创建 session 时，**让视觉模型在返回描述的同时生成一句简介**，与 `session_id` 一并返回。简介精度高于简单截取。
+首次调用创建 session 时，**让视觉模型在返回描述的同时生成一句简介**，与 `session_id` 一并返回。
 
-#### 4.2.5 并发隔离
+#### 4.2.4 并发隔离
 
 多 Agent（或单 Agent 并行多工具调用）可能同时操作不同 session，甚至同一 session 发起多轮。隔离方案：
 
@@ -297,7 +282,7 @@ interface Session {
 
 实际并发瓶颈不在 MCP 本地，而在视觉模型 API 的 rate limit——这部分由 provider adapter 自带的重试机制处理，不需要 MCP 层额外管理。
 
-#### 4.2.6 工具参数 schema
+#### 4.2.5 工具参数 schema
 
 > [!info] 关于 `image_source` / `image_sources` 的数据类型
 > 详见 [[#5.3.5 调研结论：image_source 需要支持的输入形态]]。核心结论：不同 Agent 传递图片的形态不同（ZCode 传 http URL，Claude Code / OpenCode / Codex 传本地文件路径），MCP 作为被调用方无法控制上游，因此设计为 **string 类型，自动识别**（URL / 文件路径 / base64 三种形态兼容）。
