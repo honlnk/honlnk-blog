@@ -287,19 +287,23 @@ interface Session {
 > [!info] 关于 `image_source` / `image_sources` 的数据类型
 > 详见 [[#5.3.5 调研结论：image_source 需要支持的输入形态]]。核心结论：不同 Agent 传递图片的形态不同（ZCode 传 http URL，Claude Code / OpenCode / Codex 传本地文件路径），MCP 作为被调用方无法控制上游，因此设计为 **string 类型，自动识别**（URL / 文件路径 / base64 三种形态兼容）。
 
+每个工具的 `description` 和各参数的 `description` 是 MCP 注册时暴露给 Agent 的说明文字。现阶段只写简洁描述，详细的 prompt 工程教程留给后续的 Skills 层。
+
 ##### `analyze_image`
 
 ```typescript
+// tool description: "识别单张图片的内容。支持多轮迭代——首次调用创建 session，后续调用传入 session_id 可在已有对话基础上追加提问。"
+
 // 输入
 {
-  image_source: string,        // http URL / 本地文件路径 / base64（自动识别）
-  prompt: string,              // 基座模型根据用户意图实时生成
-  session_id?: string          // 传入已有 session 发起后续轮次；不传则为首次调用，MCP 创建新 session
+  image_source: string,        // 图片来源，自动识别 http URL / 本地文件路径 / base64 三种形态
+  prompt: string,              // 对图片的识别要求，根据当前任务意图编写
+  session_id?: string          // 传入已有 session 的 ID 以发起后续轮次；不传则创建新 session
 }
 
 // 返回
 {
-  session_id: string,          // 本次调用所属的 session（首次调用时为新创建）
+  session_id: string,          // 本次调用所属的 session
   summary: string,             // session 简介（首次调用时由视觉模型生成，后续轮次原样返回）
   description: string          // 识别结果（纯文本）
 }
@@ -308,11 +312,13 @@ interface Session {
 ##### `analyze_images`
 
 ```typescript
+// tool description: "识别多张图片，支持对比或批量识别。支持多轮迭代，机制同 analyze_image。"
+
 // 输入
 {
-  image_sources: string[],     // 多张图，每项同 image_source（URL / 本地路径 / base64，自动识别）
-  prompt: string,
-  session_id?: string          // 同 analyze_image
+  image_sources: string[],     // 多张图片来源，每项自动识别 http URL / 本地文件路径 / base64
+  prompt: string,              // 对图片的识别要求，根据当前任务意图编写
+  session_id?: string          // 传入已有 session 的 ID 以发起后续轮次；不传则创建新 session
 }
 
 // 返回
@@ -326,12 +332,14 @@ interface Session {
 ##### `list_sessions`
 
 ```typescript
+// tool description: "查看当前所有识别会话的列表，包括每个 session 的简介、关联图片和迭代轮数。用于回顾历史识别记录。"
+
 // 输入：无
 
 // 返回
 {
   sessions: Array<{
-    session_id: string,
+    session_id: string,        // session 唯一标识
     summary: string,           // session 简介
     image_source: string,      // 关联的图片（截断显示）
     last_access_at: timestamp, // 最后访问时间
