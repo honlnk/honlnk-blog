@@ -50,7 +50,7 @@ type: 技术调研
   ↓
 基座模型：从正文中识别出架构图 URL
   ↓
-基座模型：调本 MCP.analyze_image 识别该图
+基座模型：调本 MCP.analyze_images 识别该图
   ↓
 基座模型：综合文字 + 图片信息回答用户
 ```
@@ -128,7 +128,7 @@ graph TD
 | --------- | ---------------------- | -------------------------------------- |
 | 工具拆分      | 按场景拆 8 个               | **不按场景拆**（见 §4 分析）                     |
 | Prompt 来源 | 内置精心调优的 prompt         | **由基座模型实时生成**                          |
-| 模型        | 默认 GLM-4.6V（可配但仅限智谱生态） | **任意 provider 自配**（首推 GPT5.6 等世界最强多模态） |
+| 模型        | 默认 GLM-4.6V（可配但仅限智谱生态） | **任意 provider 自配**（首推 ChatGPT-5.6-sol 等世界最强多模态） |
 | 部署        | stdio                  | stdio                                  |
 | 多轮迭代      | 不支持                    | **支持**（核心差异化）                          |
 
@@ -166,11 +166,11 @@ graph TD
 允许基座模型在处理用户需求的过程中，**多次调用本 MCP**：
 
 ```
-第 1 轮：基座模型 → MCP（图 + 初始 prompt）→ 描述 A
+第 1 轮：基座模型 → MCP（图 + 初始 prompt）→ 创建 session，返回描述 A + session_id
                                        ↓
 基座模型判断：描述 A 是否满足用户需求？
                                        ↓ 不满足
-第 2 轮：基座模型 → MCP（图 + 重写/补充 prompt + 历史上下文）→ 描述 B
+第 2 轮：基座模型 → MCP（session_id + 新 prompt）→ 在已有 session 基础上追加，返回描述 B
                                        ↓
                               ... 直到满足 ...
                                        ↓
@@ -212,7 +212,7 @@ MCP 返回结果只返回识别内容本身（描述文本），不附带任何�
 ### 3.5 实现要点
 
 - MCP 不负责"判断是否满足需求"——这个判断由基座模型完成
-- MCP 只负责：接收 image_source + prompt，调多模态模型，返回纯文本描述
+- MCP 只负责：接收 image_sources + prompt，调多模态模型，返回纯文本描述
 - 多轮迭代通过 MCP 侧的 **session 机制**实现——MCP 维护与视觉模型的完整对话历史，基座模型只需传递 sessionId，详见 §4.2
 
 ---
@@ -281,8 +281,8 @@ interface Session {
 
 #### 4.2.5 工具参数 schema
 
-> [!info] 关于 `image_source` / `image_sources` 的数据类型
-> 详见 [[#5.3.5 调研结论：image_source 需要支持的输入形态]]。核心结论：不同 Agent 传递图片的形态不同（ZCode 传 http URL，Claude Code / OpenCode / Codex 传本地文件路径），MCP 作为被调用方无法控制上游，因此设计为 **string 类型，自动识别**（URL / 文件路径 / base64 三种形态兼容）。
+> [!info] 关于 `image_sources` 的数据类型
+> 详见 [[#5.3.5 调研结论：image_sources 需要支持的输入形态]]。核心结论：不同 Agent 传递图片的形态不同（ZCode 传 http URL，Claude Code / OpenCode / Codex 传本地文件路径），MCP 作为被调用方无法控制上游，因此设计为 **string 类型，自动识别**（URL / 文件路径 / base64 三种形态兼容）。
 
 每个工具的 `description` 和各参数的 `description` 是 MCP 注册时暴露给 Agent 的说明文字。现阶段只写简洁描述，详细的 prompt 工程教程留给后续的 Skills 层。
 
@@ -422,8 +422,8 @@ src/
 
 ### 5.3 Agent 图片输入机制调研（关键）
 
-> [!warning] 这是设计 `image_source` 参数的前置条件
-> 用户在 Agent 输入框粘贴/选择图片后，图片最终以什么形态到达 MCP 工具，直接决定了 `image_source` 参数要接收什么类型的数据。
+> [!warning] 这是设计 `image_sources` 参数的前置条件
+> 用户在 Agent 输入框粘贴/选择图片后，图片最终以什么形态到达 MCP 工具，直接决定了 `image_sources` 参数要接收什么类型的数据。
 
 #### 5.3.1 ZCode 的图片保底机制（实测确认）
 
@@ -488,9 +488,9 @@ MCP 工具用这个 URL 调 GLM-4.6V 识别，返回文字描述
 | **MCP 接收形态** | **http URL** | **本地文件路径** | **本地文件路径** | **本地文件路径**（插件落盘） |
 | **开源** | ❌ | ❌ | ✅ | ✅ |
 
-#### 5.3.5 调研结论：image_source / image_sources 需要支持的输入形态
+#### 5.3.5 调研结论：image_sources 需要支持的输入形态
 
-上述全部调研工作，目的是确认本 MCP 工具的 `image_source`（单图，对应 `analyze_image`）和 `image_sources`（多图数组，对应 `analyze_images`）参数应该接收什么类型的数据。两者的输入形态要求一致，结论如下：
+上述全部调研工作，目的是确认本 MCP 工具的 `image_sources` 参数（图片数组，对应 `analyze_images`）应该接收什么类型的数据。数组中每一项的输入形态要求一致，结论如下：
 
 | 输入形态 | 来源场景 | 必须支持？ |
 |---------|---------|----------|
@@ -499,7 +499,7 @@ MCP 工具用这个 URL 调 GLM-4.6V 识别，返回文字描述
 | **base64** | 兜底兼容（四大主流工具都不直接传 base64 给 MCP，但不排除少数 client 会这么做） | ⚠️ 兜底 |
 
 > [!important] 设计决策
-> `image_source` / `image_sources` 设计为 **string 类型，自动识别**（URL / 文件路径 / base64），而非强制单一类型。原因：四大主流 Agent 对图片的传递形态不同，MCP 作为被调用方无法控制上游传什么，只能**兼容并自动识别**。
+> `image_sources` 设计为 **string 数组类型，每项自动识别**（URL / 文件路径 / base64），而非强制单一类型。原因：四大主流 Agent 对图片的传递形态不同，MCP 作为被调用方无法控制上游传什么，只能**兼容并自动识别**。
 >
 > 这与智谱 `@z_ai/mcp-server` 的设计一致（它支持 URL + 文件路径），但我们额外支持 base64 作为兜底。
 
@@ -737,10 +737,6 @@ X-Title: 4.5V MCP Local
 
 > [!tip] 对本 MCP 的启示
 > 即便本 MCP 不预设场景化 prompt，也可以借鉴这种结构化 prompt 思路——在 MCP 的"使用文档"中给出推荐的 prompt 模板，引导用户/基座模型按这种结构生成 prompt。
-
-### A.7 智谱方案的安全漏洞（本 MCP 可改进）
-
-智谱这个 MCP 的 `image_source` 如果传 URL，**直接把用户给的 URL 转发给智谱 API**，没有 SSRF 防护——理论上用户可以让 AI 调用 tool 去识别 `http://169.254.169.254/...` 云元数据。本 MCP 做 URL 图片识别时，**应当把 linkseek 的 SSRF 防护接到图片抓取链路上**，这是一个明确的安全优势。
 
 ---
 
