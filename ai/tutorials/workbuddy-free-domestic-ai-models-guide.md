@@ -20,7 +20,7 @@ type: 实践教程
 > 不用盗版账号、不用来路不明的中转 API，完全通过腾讯官方渠道，0 成本长期使用 GLM、Kimi、DeepSeek、MiniMax、混元等国产主流大模型。核心思路：WorkBuddy（腾讯 CodeBuddy 团队出品的 AI 工作台）内置模型不单独收费，只消耗积分——注册礼 1500 + 每月保底 500 + 每日签到月均 3000，轻度使用完全够撑。**文中所有数据均为新注册账号实测截图佐证**。
 
 > [!warning] 时效声明
-> 本文数据**截至 2026 年 8 月 19 日**，均为本人新注册账号实测 + 官方文档交叉核对。WorkBuddy 的积分政策变动非常频繁（半年内签到下线又回归、注册礼缩水、订阅体系升级），阅读时请以客户端实际显示为准，参见 [[#七、政策变动时间线]]。
+> 本文数据**截至 2026 年 8 月 19 日**，均为本人新注册账号实测 + 官方文档交叉核对。WorkBuddy 的积分政策变动非常频繁（半年内签到下线又回归、注册礼缩水、订阅体系升级），阅读时请以客户端实际显示为准，参见 [[#八、政策变动时间线]]。
 
 ## 一、为什么写这篇
 
@@ -179,9 +179,38 @@ WorkBuddy 是腾讯云 CodeBuddy 团队 2026 年推出的**全场景职场 AI �
 - **优先消耗快过期的积分**：签到/赠送积分有效期约 30 天，系统只提前 3 天提醒，自己留意。
 
 > [!info] 进阶玩法：把 WorkBuddy 当 API 用
-> WorkBuddy 提供 OpenAI 兼容接口（`copilot.tencent.com/v2/chat/completions`），可以配置到 ZCode 等支持自定义 provider 的工具里，让其他工具也「蹭」积分池。但注意：这类用法对 prompt 内容更敏感，我遇到过 git 状态信息触发内容过滤导致全部请求被拦的坑，排查过程见 [[zcode-gitstatus-workbuddy-content-filter]]。
+> 积分还能接进编程工具（ZCode、OpenCode 等），让 coding agent 也用同一个积分池。配置参数和三个实测踩坑点见 [[#七、进阶：配置到编程工具里用]]。
 
-## 七、政策变动时间线
+## 七、进阶：配置到编程工具里用
+
+积分不只能在客户端里聊天——WorkBuddy 提供 OpenAI 兼容接口，可以接进编程工具，让 coding agent 也花同一个积分池。
+
+### 7.1 通用配置参数
+
+**先拿 API Key**：客户端 → 头像菜单 → 积分余额 → 「套餐与用量」页 → 左侧「API 管理」里创建。
+
+之后在任何支持自定义 provider 的工具里，都填这四项：
+
+| 配置项 | 值 |
+|---|---|
+| Base URL | `https://copilot.tencent.com/v2` |
+| API 格式（协议） | **Chat Completions**（`/chat/completions`） |
+| API Key | 上一步创建的 Key |
+| 模型名 | **全小写**：`glm-5.2`、`kimi-k3`、`deepseek-v4-flash`、`hy3` 等 |
+
+### 7.2 三个实测踩坑点
+
+1. **只支持 Chat Completions 协议**：腾讯这个接口没有 Responses API、没有 Anthropic 协议，工具里协议选错一概不通；
+2. **别信工具自带的「测试连接」按钮**：很多工具的测试按钮会去调 `/models` 等接口，腾讯没实现，配置完全正确也会报失败。**正确的验证方式是直接去对话里发一句 "hi"**，有回复就是通了；
+3. **ZCode + git 仓库才会踩的坑**：注意下图里我的 Base URL 填的是 `http://127.0.0.1:18790/v2` 本地中转，而不是官方地址——原因是 ZCode 在 git 仓库项目中会自动往 system prompt 注入一段 git 状态说明，其中一句话恰好触发腾讯 WAF 的内容过滤，导致所有请求被拦，本地中转的作用是在转发前改写掉那句话（完整排查过程见 [[zcode-gitstatus-workbuddy-content-filter]]）。**如果你用的不是 ZCode，或者项目不是 git 仓库，大概率用不到这个中转，直接填上面的官方地址即可。**
+
+![ZCode 模型设置中的腾讯 provider：API 格式必须选 Chat Completions，模型列表手动添加 glm-5.2 / kimi-k3 / deepseek-v4-flash / hy3（全小写）。Base URL 为本地中转地址的原因见上面第 3 点](https://honlnk-obsidian.honlnk.com/images/20260819_004919_395b1fd93b8e32ee.png)
+
+### 7.3 另一种推荐姿势：CC Switch + OpenCode
+
+如果你用 OpenCode（或 Claude Code / Codex 等终端工具），推荐配合 [CC Switch](https://github.com/farion1231/cc-switch)（macOS 可以直接 `brew install --cask cc-switch`）：它是一个图形化的 provider 配置管理工具，在里面给 OpenCode 新增一个供应商、填好上面那四项并启用，再打开 OpenCode 就能在模型列表里直接选腾讯的模型。好处是多家供应商一键切换，不用手改 JSON/TOML 配置文件。懂的人一看就会，就不贴图了。
+
+## 八、政策变动时间线
 
 这条路线唯一的「风险」是政策波动。仅 2026 年上半年：
 
@@ -198,7 +227,7 @@ WorkBuddy 是腾讯云 CodeBuddy 团队 2026 年推出的**全场景职场 AI �
 > [!warning] 写给未来的读者
 > 如果你是几个月之后读到这篇，签到数额、注册礼大小很可能已经和文中不同。判断标准很简单：**打开客户端看实际规则**。只要「签到 + 每月免费额度」的大框架还在，这篇的思路就依然成立。
 
-## 八、和其他免费路线的对比
+## 九、和其他免费路线的对比
 
 「免费用国产模型」不止这一条路，客观对比一下：
 
@@ -210,7 +239,7 @@ WorkBuddy 是腾讯云 CodeBuddy 团队 2026 年推出的**全场景职场 AI �
 
 我的建议：**日常对话和办公任务走 WorkBuddy 积分，写程序调 API 走各厂商免费额度，两条路线并不冲突**。
 
-## 九、常见问题
+## 十、常见问题
 
 **Q：这正规吗？会不会封号？**
 所有积分渠道都是官方明文规则（签到、任务、发文、邀请），不涉及任何多开、脚本、外挂，不存在封号风险。唯一要求：别用自动化脚本模拟签到，手动点一下就好。
@@ -224,7 +253,7 @@ WorkBuddy 是腾讯云 CodeBuddy 团队 2026 年推出的**全场景职场 AI �
 **Q：和 OpenClaw 什么关系？**
 WorkBuddy 基于开源框架 OpenClaw 构建并兼容其技能生态。OpenClaw 面向技术用户、需要自己部署；WorkBuddy 下载即用。
 
-## 十、参考资料
+## 十一、参考资料
 
 - [WorkBuddy 官方文档 — 积分说明](https://www.workbuddy.cn/docs/workbuddy/Credits)
 - [WorkBuddy 官方文档 — 定价](https://www.workbuddy.cn/docs/workbuddy/Pricing)
