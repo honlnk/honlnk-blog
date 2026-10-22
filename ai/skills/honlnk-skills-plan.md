@@ -10,7 +10,7 @@ aliases:
   - 个人 Skills 合集
   - Skills 计划
 date: 2026-07-22
-status: draft
+status: in-progress
 type: 方案规划
 ---
 
@@ -194,6 +194,9 @@ description: 这个 skill 做什么 + 什么场景触发。description 是 Agent
 4. 综合文字 + 图片信息回答
 ```
 
+> [!success] 结局（2026-10-01）：收窄落地为 `picsense-usage`
+> 实际编写时定位收窄：不做大而全的"编排层"技能，而是与 `linkseek-usage` 对称的 **picsense 使用教程**——上述 workflow 即其核心章节「读一篇带图片链接的文章」（linkseek 抓正文 → 修正图片 URL → `analyze_document` 全文标注 / `analyze_images` 任务性深读两条读法），并沉淀了实测验证的坑：图片 URL 三种形态必须修正、markdown 混 HTML 导致 `analyze_document` 误判（`images_analyzed: 0` 且不报错）、session 多轮迭代边界。作为仓库第二个技能收录。
+
 ### 5.2 `dev-standards`（后续）
 
 作者的开发规范沉淀：提交规范、分支策略、命名约定等。
@@ -249,21 +252,21 @@ image-vision-mcp ────┘          │
 
 ### 结构与命名
 
-- [ ] 仓库名最终确认（`honlnk-skills`？还是其他？）
-- [ ] skill 命名规范（`mcp-orchestration` 是否合适？要不要加 `honlnk-` 前缀？）
-- [ ] 目录结构是否需要调整（`workflows/` 子目录是否必要？）
+- [x] 仓库名最终确认：`honlnk-skills`（GitHub `honlnk/honlnk-skills`，公开，2026-09-29 创建）
+- [x] skill 命名规范（2026-10-01 定）：**`picsense-usage`**——定位收窄为 picsense 使用教程后 `mcp-orchestration` 不再贴切；不加 `honlnk-` 前缀，与 `linkseek-usage` 对称
+- [x] 目录结构（2026-10-01 定）：单文件 `SKILL.md` 即可，无需 `workflows/` 子目录——核心场景只有一条链路，四步流程直接写在正文
 
 ### 首批 skill 内容
 
-- [ ] `mcp-orchestration` 的 description 最终定稿
-- [ ] 列出 linkseek + image MCP 的全部典型组合场景
-- [ ] 每个 workflow 范式的详细编写
+- [x] description 定稿（2026-10-01）：随 `picsense-usage` 落地——触发条件为工具列表出现 `mcp__picsense__*` 且任务涉及识图 / 理解文章配图 / 对比图片 / 分析视频
+- [x] 场景清单（2026-10-01）：枚举后收窄为一条核心链路「读一篇带图片链接的文章」（来源两路：linkseek 抓取 / 用户直给；两条读法：全文标注 / 单图深读），其余组合（视频、session 迭代）作为简短小节
+- [x] workflow 详写（2026-10-01）：即 `picsense-usage` SKILL.md 第二节四步流程，全部经 2026-10-01 实测验证（Wikipedia MCP 条目架构图端到端走通）
 
 ### 分发与安装
 
-- [ ] Claude Code / ZCode 的具体接入方式（git submodule？symlink？插件机制？）
+- [x] Claude Code / ZCode 的具体接入方式：**symlink**（仓库根 `install.sh` 一键接入；已按 ZCode 源码核实：用户级技能根只扫描一层、但跟随 symlink，故 `skills/<name>/` 结构可原样接入）
 - [ ] 其他 Agent（OpenCode / Codex）的 skills 发现机制调研
-- [ ] 是否需要提供安装脚本
+- [x] 是否需要安装脚本：**需要，已提供**（`install.sh`：幂等；目标位被占默认拒绝，`--force` 备份替换，五条路径实测通过）
 
 ### 引导用户配置 MCP
 
@@ -280,3 +283,5 @@ image-vision-mcp ────┘          │
 ## 修订记录
 
 - 2026-07-22：初稿，确立三层模型 + 方案 A 结构 + 首批 skill 规划。skills 详细设计延后至图片识别 MCP 落地后。
+- 2026-09-29：仓库落地——GitHub [honlnk/honlnk-skills](https://github.com/honlnk/honlnk-skills)（公开）创建，骨架（README / LICENSE / install.sh）入库并推送。§八 的仓库名、接入方式（symlink）、安装脚本三项已决。触发条件（识图 MCP 落地）此时早已满足——picsense 于 2026-08 开源在线。首批技能收录（linkseek-usage / plan-execute / chatlog-to-novel 的去留）与 `mcp-orchestration` 编写留待后续批次。
+- 2026-10-01：`mcp-orchestration` 定位收窄、编写落地为 **`picsense-usage`**（仓库第二个技能，install.sh 已接入本机）。核心链路即 7 月规划的 workflow，经 Wikipedia MCP 条目实测端到端验证；教程沉淀三个实测坑（图片 URL 形态修正 / `analyze_document` 混 HTML 误判不报错 / session 迭代不能追加图）。§5.1 补结局注记，§八「结构与命名」「首批 skill 内容」两组待办全部了结。
