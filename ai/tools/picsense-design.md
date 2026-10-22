@@ -613,8 +613,8 @@ honlnk-skills 是作者个人生产力 Skills 合集，作为两个 MCP 之上�
 
 ### 生态层面
 
-- [ ] 与 linkseek 的协作 workflow 文档化（交给 [[honlnk-skills-plan|honlnk-skills]] 的 `mcp-orchestration` skill 承载）
-- [ ] honlnk-skills 的首个 skill 启动时机（本 MCP 落地后）
+- [x] 与 linkseek 的协作 workflow 文档化（2026-10-01 由 honlnk-skills 的 `picsense-usage` 技能承载落地——原计划名 `mcp-orchestration`，编写时定位收窄）
+- [x] honlnk-skills 的首个 skill 启动时机（本 MCP 落地后，2026-10-01 实际落地）
 - [ ] 三层模型在 README / Skills / AGENTS.md 的内容边界确认
 
 ### 调研层面
