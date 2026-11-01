@@ -294,6 +294,46 @@ generator=generator,
 
 只换种子、分辨率或采样步数时，可以复用同一条提示词已经算好的文本向量，不必重新进行较慢的 CPU 编码；只有提示词本身变化时才需要重新编码。
 
+### 同一提示词连续生成多张
+
+前文已经把文本编码和去噪生成拆开，因此想根据同一条提示词多抽几张图时，不需要重复运行 Qwen。首次生成成功后，新建代码格运行下面的代码即可。默认生成 2 张，修改数量变量即可调整张数：
+
+```python
+import random
+import torch
+from IPython.display import display
+
+image_count = 2
+
+# 沿用已经计算好的文本向量，不再运行文本编码器
+for index in range(image_count):
+    seed = random.randint(0, 2**32 - 1)
+    print(f"正在生成第 {index + 1}/{image_count} 张，种子：{seed}")
+    generator = torch.Generator("cpu").manual_seed(seed)
+
+    with torch.inference_mode():
+        image = pipe(
+            prompt=None,
+            prompt_embeds=prompt_embeds,
+            prompt_attention_mask=prompt_attention_mask,
+            negative_prompt_embeds=negative_embeds,
+            negative_prompt_attention_mask=negative_attention_mask,
+            width=512,
+            height=512,
+            num_inference_steps=20,
+            guidance_scale=3.0,
+            uncond_skip_layers=[22],
+            generator=generator,
+        ).images[0]
+
+    display(image)
+    image.save(f"/kaggle/working/moss_{index + 1}_seed_{seed}.png")
+```
+
+每张图都会使用不同的初始噪声，并在文件名中记录种子，方便复现喜欢的结果。这里选择逐张生成而不是一次提交一个图片批次，是为了减少额外显存压力。
+
+重复利用文本向量只省掉了文本编码时间；每张图片仍要独立执行完整的去噪和解码过程，因此总生图时间会随张数增加。
+
 ### 负向提示词
 
 官方 Base 指南给出了一些可用负向标签，但具体效果与模型版本和采样方式有关。本文示例采用空负向提示词加负向分支跳层，不建议未做对照就套用其他扩散模型的一大串负向词。
