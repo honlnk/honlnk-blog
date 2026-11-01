@@ -143,13 +143,14 @@ Kaggle 可能提示某些预装包存在依赖冲突。如果冲突与 MOSS-Imag
 
 若第一张卡仍有十几 GB 被旧进程占用，简单删除变量未必能清干净。此时应重启 Notebook 会话，然后**不要重新运行旧代码格**。重启可能要求重新下载模型，所以能在不重启的情况下清理时，不必把重启当成常规操作。
 
-在干净会话中运行下面这份代码。它把文本编码留在 CPU，把生图模型放到第二张 T4：
+在干净会话中依次运行下面两个代码格。第一格负责加载模型和编码提示词，第二格只负责批量生图。以后更换提示词时重新运行第一格；只想继续抽图时，只运行第二格。
+
+### 代码格一：加载模型并生成文本向量
 
 ```python
 import gc
 import torch
 from diffusers import DiffusionPipeline
-from IPython.display import display
 
 pipe = DiffusionPipeline.from_pretrained(
     "OpenMOSS-Team/MOSS-Image-SFT",
@@ -200,33 +201,48 @@ print("文本编码完成，释放编码器……")
 pipe.text_encoder = None
 pipe.tokenizer = None
 gc.collect()
-
 pipe.to("cuda:1")
-
-print("开始生成图片……")
-with torch.inference_mode():
-    image = pipe(
-        prompt=None,
-        prompt_embeds=prompt_embeds,
-        prompt_attention_mask=prompt_attention_mask,
-        negative_prompt_embeds=negative_embeds,
-        negative_prompt_attention_mask=negative_attention_mask,
-        width=512,
-        height=512,
-        num_inference_steps=20,
-        guidance_scale=3.0,
-        uncond_skip_layers=[22],
-        generator=torch.Generator("cpu").manual_seed(42),
-    ).images[0]
-
-display(image)
-image.save("/kaggle/working/moss_test.png")
-print("完成：/kaggle/working/moss_test.png")
+print("文本向量已就绪，可以运行第二个代码格")
 ```
 
-第一次运行需要下载二十多 GB 权重。保持页面开启，耐心等待，不要重复点击运行。模型加载后，CPU 编码也可能需要一段时间；看到“开始生成图片”才说明进入去噪阶段。
+第一次运行需要下载二十多 GB 权重。保持页面开启，耐心等待，不要重复点击运行。CPU 编码也需要一段时间，看到“文本向量已就绪”后再运行第二格。
 
-这份代码为首次测试做了几处取舍：
+### 代码格二：复用文本向量，批量生成 2 张
+
+```python
+import random
+import torch
+from IPython.display import display
+
+image_count = 2
+
+for index in range(image_count):
+    seed = random.randint(0, 2**32 - 1)
+    print(f"正在生成第 {index + 1}/{image_count} 张，种子：{seed}")
+    generator = torch.Generator("cpu").manual_seed(seed)
+
+    with torch.inference_mode():
+        image = pipe(
+            prompt=None,
+            prompt_embeds=prompt_embeds,
+            prompt_attention_mask=prompt_attention_mask,
+            negative_prompt_embeds=negative_embeds,
+            negative_prompt_attention_mask=negative_attention_mask,
+            width=512,
+            height=512,
+            num_inference_steps=20,
+            guidance_scale=3.0,
+            uncond_skip_layers=[22],
+            generator=generator,
+        ).images[0]
+
+    display(image)
+    image.save(f"/kaggle/working/moss_{index + 1}_seed_{seed}.png")
+```
+
+第二格完全不包含文本编码器，每次运行只执行去噪和解码。每张图使用不同种子，并在文件名中记录种子。逐张生成而不是一次提交一个图片批次，可以减少额外显存压力。修改数量变量即可调整张数，但总生图时间仍会随着张数增加。
+
+这两个代码格为首次测试做了几处取舍：
 
 - 分辨率为 512×512，减少首次测试的计算量。
 - 采样为 20 步，而不是追求最佳质量的 50 步。
@@ -236,7 +252,7 @@ print("完成：/kaggle/working/moss_test.png")
 
 ## 六、修改提示词和生成参数
 
-首次生成成功后，不必重新安装依赖或下载模型。新代码格中只重新编码提示词，再执行生成部分即可。
+首次生成成功后，不必重新安装依赖或下载模型。只想继续生成同一提示词时，直接重复运行代码格二；需要更换提示词时，先修改并重新运行代码格一，再运行代码格二。
 
 ### 普通提示词
 
@@ -266,73 +282,18 @@ prompt_embeds, prompt_attention_mask = encode_on_cpu(
 
 ### 随机种子与结果复现
 
-示例把随机种子固定为 42。种子决定扩散过程的初始噪声，因此在模型、提示词、种子和生成参数都相同时，重复运行会得到相同或高度一致的结果。如果每次点生成都是同一张图，通常不是模型没有重新运行，而是种子没有变化。
+种子决定扩散过程的初始噪声。在模型、提示词、种子和生成参数都相同时，重复运行会得到相同或高度一致的结果。如果每次生成都是同一张图，通常不是模型没有重新运行，而是种子没有变化。
 
-想固定另一套构图，可以换成任意整数种子：
-
-```python
-generator = torch.Generator("cpu").manual_seed(123)
-```
-
-想每次生成不同的图片，可以在生图代码前随机选择一个种子，并把它打印出来：
+代码格二每次都会随机选择种子，适合连续抽取不同构图。想精确复现某张图片，可以把随机选择改成之前记录的种子，例如：
 
 ```python
-import random
-
-seed = random.randint(0, 2**32 - 1)
-print("本次种子：", seed)
+seed = 123456789
 generator = torch.Generator("cpu").manual_seed(seed)
-```
-
-然后把生成调用中的随机数生成器替换为：
-
-```python
-generator=generator,
 ```
 
 看到满意的结果时，应同时保存提示词、种子、分辨率、步数等参数。以后使用相同配置更容易复现；跨软件版本、权重精度或硬件环境时，不保证逐像素一致。
 
-只换种子、分辨率或采样步数时，可以复用同一条提示词已经算好的文本向量，不必重新进行较慢的 CPU 编码；只有提示词本身变化时才需要重新编码。
-
-### 同一提示词连续生成多张
-
-前文已经把文本编码和去噪生成拆开，因此想根据同一条提示词多抽几张图时，不需要重复运行 Qwen。首次生成成功后，新建代码格运行下面的代码即可。默认生成 2 张，修改数量变量即可调整张数：
-
-```python
-import random
-import torch
-from IPython.display import display
-
-image_count = 2
-
-# 沿用已经计算好的文本向量，不再运行文本编码器
-for index in range(image_count):
-    seed = random.randint(0, 2**32 - 1)
-    print(f"正在生成第 {index + 1}/{image_count} 张，种子：{seed}")
-    generator = torch.Generator("cpu").manual_seed(seed)
-
-    with torch.inference_mode():
-        image = pipe(
-            prompt=None,
-            prompt_embeds=prompt_embeds,
-            prompt_attention_mask=prompt_attention_mask,
-            negative_prompt_embeds=negative_embeds,
-            negative_prompt_attention_mask=negative_attention_mask,
-            width=512,
-            height=512,
-            num_inference_steps=20,
-            guidance_scale=3.0,
-            uncond_skip_layers=[22],
-            generator=generator,
-        ).images[0]
-
-    display(image)
-    image.save(f"/kaggle/working/moss_{index + 1}_seed_{seed}.png")
-```
-
-每张图都会使用不同的初始噪声，并在文件名中记录种子，方便复现喜欢的结果。这里选择逐张生成而不是一次提交一个图片批次，是为了减少额外显存压力。
-
-重复利用文本向量只省掉了文本编码时间；每张图片仍要独立执行完整的去噪和解码过程，因此总生图时间会随张数增加。
+只换种子、分辨率或采样步数时，可以复用同一条提示词已经算好的文本向量，不必重新运行代码格一；只有提示词本身变化时才需要重新编码。
 
 ### 负向提示词
 
